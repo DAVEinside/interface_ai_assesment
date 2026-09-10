@@ -1,0 +1,57 @@
+# Deployment guardrails. Intersected with each capability's own policy block --
+# never unioned. A capability can be narrower than this file; it can never be
+# wider.
+
+# Where the agent may act at all. An empty list would mean "anywhere", so it is
+# never empty in a real deployment.
+allowed_hosts:
+  - "127.0.0.1:8799"      # CoreServ 7.2 -- Meridian CU (tenant: meridian_cu)
+  - "localhost:8799"
+  - "127.0.0.1:8798"      # CoreServ 7.2 -- Northgate FCU (tenant: northgate_cu)
+
+# Routes no capability may touch, whatever it claims. /admin is the fault
+# injector: it exists for the test harness and must be unreachable from the
+# agent, which is the point of listing it here.
+denied_routes:
+  - "^/admin"
+  - "^/signoff"
+
+# Action verbs available at all. Note the absence of file upload, download and
+# script execution: they are not in the vocabulary, so they cannot be reached
+# by a malformed artifact or a confused model.
+allowed_actions:
+  - click
+  - type
+  - select
+  - press
+  - navigate
+  - wait
+  - extract
+  - assert
+
+max_steps: 60
+
+# Risky actions never execute autonomously. They raise an approval request to a
+# human operator, who sees the live screen and the proposed action before
+# deciding. Turning this off is a deliberate act with an audit trail.
+irreversible_requires_approval: true
+
+# Institution-wide irreversibility rules, applied on top of whatever a recorded
+# capability claims about itself. The recorder was a language model; this list
+# was written by a person.
+irreversible_control_patterns:
+  - "POST TRANSACTION"
+  - "\\bWIRE\\b"
+  - "\\bTRANSFER\\b"
+  - "CLOSE ACCOUNT"
+  - "\\bDELETE\\b"
+  - "\\bPURGE\\b"
+  - "CHARGE ?OFF"
+  - "\\bVOID\\b"
+
+irreversible_routes:
+  - "^/posting"
+
+# Extra redaction beyond the built-in categories (SSN, PAN, credentials, email).
+redact_patterns:
+  - "CONFIRMATION NUMBER\\s*:?\\s*CF[0-9]+"
