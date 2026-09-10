@@ -1,0 +1,140 @@
+# Application profile: Meridian Data Systems "CoreServ" Teller Workstation 7.2
+#
+# Product-level knowledge, authored once by someone who knows this application,
+# and inherited by every capability recorded against it -- for every tenant.
+# Nothing here was learned from a recording; a happy-path run never sees any of
+# it. This is the answer to "how does replay handle exceptional states it was
+# never recorded hitting".
+
+app:
+  vendor: "Meridian Data Systems"
+  product: "CoreServ Teller Workstation"
+  version: "7.2"
+
+description: >
+  Server-rendered frameset application. Screens report conditions as an
+  alphanumeric code (PREFIX-NNN) in the body text; the prefix identifies the
+  subsystem (MBR member file, AMT amount validation, SEC security, CSV platform).
+
+# --------------------------------------------------------------------------- #
+# Expected business outcomes. These are results a caller must handle, not bugs.
+# --------------------------------------------------------------------------- #
+outcomes:
+  - code: MEMBER_NOT_FOUND
+    kind: business
+    description: >
+      The member number is well-formed but no such record exists on the member
+      file. A legitimate answer to a lookup, not an error.
+    detect:
+      text_matches: "MBR-404"
+    terminal: true
+    retryable: false
+    remediation: "Confirm the member number with the caller; try a name search instead."
+
+  - code: VALIDATION_ERROR
+    kind: business
+    description: >
+      The application rejected the supplied input before doing any work
+      (wrong length, non-numeric, amount below product minimum).
+    detect:
+      text_matches: "MBR-00[0-9]|AMT-[0-9]{3}"
+    terminal: true
+    retryable: false
+    remediation: "Correct the input and re-invoke. Retrying unchanged will not help."
+
+  - code: PERMISSION_DENIED
+    kind: denied
+    description: >
+      The record carries an advisory hold, or the signed-on operator's role is
+      not authorized for this function. Distinct from NOT_FOUND: the record
+      exists and the caller may not see it.
+    detect:
+      text_matches: "SEC-40[0-9]|PERMISSION DENIED"
+    terminal: true
+    retryable: false
+    remediation: "Route to a supervisor or to Compliance; do not retry with the same operator."
+
+# --------------------------------------------------------------------------- #
+# Recoverable conditions. Handled inside a replay without the caller noticing.
+# --------------------------------------------------------------------------- #
+interstitials:
+  - name: system_notice
+    note: >
+      Broadcast maintenance banner. Can appear before any screen, at any point
+      in a flow, and must be acknowledged before the underlying screen renders.
+    when:
+      all_of:
+        - text_present: "SYSTEM NOTICE"
+        - text_present: "ACKNOWLEDGE"
+    max_occurrences: 2
+    dismiss:
+      - id: ack_notice
+        intent: "Acknowledge the maintenance notice"
+        action: click
+        risk: safe
+        target:
+          description: "ACKNOWLEDGE button on the notice screen"
+          strategies:
+            - kind: role_name
+              role: button
+              name: "ACKNOWLEDGE"
+          verify:
+            role: button
+
+transient:
+  - name: slow_host_response
+    note: >
+      The core host link stalls under load. The page eventually renders; the
+      correct response is to wait and re-observe, not to re-submit -- a
+      re-submit on a write flow would double-post.
+    when:
+      any_of:
+        - text_present: "PLEASE WAIT"
+        - text_present: "PROCESSING"
+    max_occurrences: 4
+    dismiss: []
+
+session_expired:
+  any_of:
+    - text_matches: "CSV-440"
+    - all_of:
+        - text_present: "OPERATOR SIGN ON"
+        - text_present: "OPERATOR ID"
+
+reauth_capability: sign_on_coreserv
+
+hard_error:
+  any_of:
+    - text_matches: "CSV-500"
+    - text_present: "CORESERV SYSTEM ERROR"
+
+# --------------------------------------------------------------------------- #
+# Safety
+# --------------------------------------------------------------------------- #
+# Control names that are irreversible in this product regardless of what a
+# recording claims about them. The line drawn here: opening a sub-account is a
+# reversible write (a suffix can be closed same-day), posting a transaction to
+# the core is not (it hits the general ledger and requires a reversing entry).
+irreversible_controls:
+  - "POST TRANSACTION"
+  - "\\bWIRE\\b"
+  - "\\bTRANSFER\\b"
+  - "CLOSE ACCOUNT"
+  - "DELETE"
+  - "PURGE"
+  - "CHARGE ?OFF"
+
+# Text that changes between sessions, members or days. Never usable as a locator
+# anchor, however stable it looked in the single screen a recording saw.
+volatile_text:
+  - "^OPR:"                       # signed-on operator, in the navigation frame
+  - "^\\d{4}-\\d{2}-\\d{2}$"          # dates
+  - "^-?\\(?\\$"                    # money amounts
+  - "^\\d{6,}$"                     # member and account numbers
+  - "^CF[0-9]+$"                  # confirmation numbers
+  - "BALANCES AS OF"              # carries today's date
+  - "^[0-9]{3}-[0-9]{2}-[0-9]{4}$"  # tax id
+  - "REFERENCE ID"
+
+redact_patterns:
+  - "TAX ID \\(SSN\\)\\s*:?\\s*[0-9-]+"
