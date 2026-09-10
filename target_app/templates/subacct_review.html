@@ -1,0 +1,24 @@
+<html><head><title>CONFIRM SUB-ACCOUNT</title></head>
+<body bgcolor="#ffffff" text="#000000">
+<table width="100%" cellpadding="2" cellspacing="0" border="0">
+ <tr><td bgcolor="#b8860b"><font face="Arial" size="2" color="#ffffff"><b>&nbsp;CONFIRM SUB-ACCOUNT OPENING</b></font></td></tr>
+</table>
+<br>
+<table cellpadding="3" cellspacing="0" border="0">
+ <tr><td><font face="Arial" size="2">MEMBER:</font></td><td><font face="Courier New" size="2"><b>{{ member_number }} {{ member.name }}</b></font></td></tr>
+ <tr><td><font face="Arial" size="2">PRODUCT:</font></td><td><font face="Courier New" size="2">{{ suffix }} - {{ label }}</font></td></tr>
+ <tr><td><font face="Arial" size="2">INITIAL DEPOSIT:</font></td><td><font face="Courier New" size="2">{{ amount }}</font></td></tr>
+</table>
+<br>
+<table cellpadding="6" cellspacing="0" border="1" bgcolor="#ffffcc" width="520"><tr><td>
+<font face="Arial" size="2">THIS WILL CREATE A NEW SHARE SUFFIX ON THE CORE FILE.</font>
+</td></tr></table>
+<br>
+<form method="POST" action="/subacct" name="frmCommit">
+<input type="hidden" name="f1" value="{{ member_number }}">
+<input type="hidden" name="f2" value="{{ suffix }}">
+<input type="hidden" name="f3" value="{{ raw_amount }}">
+<input type="hidden" name="stage" value="commit">
+<input type="submit" value="CONFIRM OPEN" style="font-family:Arial;font-size:11px;width:120px">
+</form>
+</body></html>

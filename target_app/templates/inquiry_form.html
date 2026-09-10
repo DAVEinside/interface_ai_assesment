@@ -1,0 +1,22 @@
+<html><head><title>MEMBER INQUIRY</title></head>
+<body bgcolor="#ffffff" text="#000000">
+<table width="100%" cellpadding="2" cellspacing="0" border="0">
+ <tr><td bgcolor="#808080"><font face="Arial" size="2" color="#ffffff"><b>&nbsp;MEMBER INQUIRY</b></font></td></tr>
+</table>
+<br>
+<form method="POST" action="/inquiry" name="frmInq">
+<table cellpadding="4" cellspacing="0" border="0">
+ <tr>
+  <td align="right"><font face="Arial" size="2">MEMBER NUMBER:</font></td>
+  <td><input type="text" name="f1" id="ctl00_wf_txt3" size="12" maxlength="8" style="font-family:Courier New"></td>
+  <td><input type="submit" value="INQUIRE" style="font-family:Arial;font-size:11px;width:80px"></td>
+ </tr>
+</table>
+</form>
+{% if error %}
+<table cellpadding="4" cellspacing="0" border="1" bgcolor="#ffe0e0"><tr><td>
+<font face="Courier New" size="2" color="#a00000"><b>{{ error }}</b></font>
+</td></tr></table>
+{% endif %}
+<br><font face="Arial" size="1">F3=EXIT&nbsp;&nbsp;F5=REFRESH&nbsp;&nbsp;F12=CANCEL</font>
+</body></html>

@@ -1,0 +1,37 @@
+<html><head><title>MEMBER DETAIL</title></head>
+<body bgcolor="#ffffff" text="#000000">
+<table width="100%" cellpadding="2" cellspacing="0" border="0">
+ <tr><td bgcolor="#808080"><font face="Arial" size="2" color="#ffffff"><b>&nbsp;MEMBER DETAIL&nbsp;&nbsp;-&nbsp;&nbsp;INQUIRY COMPLETE</b></font></td></tr>
+</table>
+<br>
+<table cellpadding="3" cellspacing="0" border="0">
+ <tr><td><font face="Arial" size="2">MEMBER NUMBER:</font></td><td><font face="Courier New" size="2"><b>{{ member_number }}</b></font></td>
+     <td width="30">&nbsp;</td>
+     <td><font face="Arial" size="2">BRANCH:</font></td><td><font face="Courier New" size="2">{{ member.branch }}</font></td></tr>
+ <tr><td><font face="Arial" size="2">NAME:</font></td><td><font face="Courier New" size="2"><b>{{ member.name }}</b></font></td>
+     <td>&nbsp;</td>
+     <td><font face="Arial" size="2">MEMBER SINCE:</font></td><td><font face="Courier New" size="2">{{ member.member_since }}</font></td></tr>
+ <tr><td><font face="Arial" size="2">TAX ID (SSN):</font></td><td><font face="Courier New" size="2">{{ member.ssn }}</font></td>
+     <td>&nbsp;</td>
+     <td><font face="Arial" size="2">DATE OF BIRTH:</font></td><td><font face="Courier New" size="2">{{ member.dob }}</font></td></tr>
+</table>
+<br>
+<table cellpadding="4" cellspacing="1" border="0" bgcolor="#808080">
+ <tr bgcolor="#d4d0c8">
+   <td><font face="Arial" size="1"><b>SUFFIX</b></font></td>
+   <td><font face="Arial" size="1"><b>ACCOUNT TYPE</b></font></td>
+   <td align="right"><font face="Arial" size="1"><b>CURRENT BALANCE</b></font></td>
+   <td><font face="Arial" size="1"><b>STATUS</b></font></td>
+ </tr>
+ {% for r in rows %}
+ <tr bgcolor="#ffffff">
+   <td><font face="Courier New" size="2">{{ r.suffix }}</font></td>
+   <td><font face="Courier New" size="2">{{ r.type }}</font></td>
+   <td align="right"><font face="Courier New" size="2">{{ r.balance }}</font></td>
+   <td><font face="Courier New" size="2">{{ r.status }}</font></td>
+ </tr>
+ {% endfor %}
+</table>
+<br><font face="Arial" size="1">BALANCES AS OF {{ as_of }} &nbsp;|&nbsp; SOURCE: CORE POSTING FILE</font><br><br>
+<font face="Arial" size="2"><a href="/inquiry">NEW INQUIRY</a> &nbsp;|&nbsp; <a href="/subacct?mbr={{ member_number }}">OPEN SUB-ACCOUNT</a></font>
+</body></html>
