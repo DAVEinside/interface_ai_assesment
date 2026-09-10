@@ -4,31 +4,6 @@
 there is nothing in the code that prefers one. Choose on which environment you
 would rather live in day to day.
 
-### First, a correction about that "10× slower"
-
-WSL is **not** 10× slower. *Crossing the Windows↔Linux filesystem boundary* is.
-If you clone into `~/projects/pcx` (inside the Linux filesystem), WSL runs this at
-full native speed — for a Python + Chromium workload, generally a little faster
-than Windows. The penalty applies only if you put the repo on `/mnt/c/Users/...`
-and make Linux read Windows files through a translation layer on every access.
-
-That is one `cd`, not a platform tax. So it is not a reason to avoid WSL — but it
-is also not a reason to use it if you would rather stay native.
-
-| | Native Windows | WSL |
-|---|---|---|
-| Speed | fast | fast (repo inside `~`, not `/mnt/c`) |
-| Setup steps | fewer — Chromium needs no extra libraries | one extra: `install-deps` |
-| `make` | not available; run the Python commands instead | works |
-| Shell syntax | `$env:VAR = "x"` (PowerShell) | `export VAR=x` |
-| Seeing the browser (`PCX_HEADLESS=0`) | just works | works on Win 11 (WSLg); needs an X server on Win 10 |
-| Debugging in VS Code | native, no remote hop | via the WSL extension |
-
-**Verified honestly:** every command below was executed on Linux. The Windows path
-is the same Python with no POSIX dependencies left in it — the demo scripts are
-Python, not bash, and nothing needs `PYTHONPATH` — but I could not execute it on
-Windows myself. If anything there misbehaves, it will be in §Troubleshooting, and
-WSL is a working fallback.
 
 ---
 
