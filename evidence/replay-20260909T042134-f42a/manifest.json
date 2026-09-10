@@ -1,0 +1,113 @@
+{
+  "run_id": "replay-20260909T042134-f42a",
+  "mode": "replay",
+  "started_at": 1788927695.443885,
+  "duration_s": 7.48,
+  "events": 21,
+  "capability": "post_transaction_guarded",
+  "version": 1,
+  "digest": "sha256:7c8b2f0408dfd54ae5fd84df093929da",
+  "tenant": "default",
+  "execution_type": 1,
+  "status": "escalated",
+  "outcome": "APPROVAL_REQUIRED",
+  "outcome_description": "",
+  "remediation": "",
+  "steps": [
+    {
+      "id": "s1",
+      "intent": "Open the transaction posting screen from the function menu",
+      "action": "click",
+      "status": "ok",
+      "resolution": {
+        "ok": true,
+        "ref": "e14",
+        "strategy_index": 0,
+        "strategy_kind": "role_name",
+        "confidence": 0.97,
+        "candidates": 1,
+        "degraded": false,
+        "reason": "verified"
+      },
+      "value_sent": null,
+      "extracted": null,
+      "duration_ms": 427,
+      "attempts": 1,
+      "expectation": null,
+      "detail": ""
+    },
+    {
+      "id": "s2",
+      "intent": "Enter the account number",
+      "action": "type",
+      "status": "ok",
+      "resolution": {
+        "ok": true,
+        "ref": "e7",
+        "strategy_index": 0,
+        "strategy_kind": "label",
+        "confidence": 0.9,
+        "candidates": 1,
+        "degraded": false,
+        "reason": "verified"
+      },
+      "value_sent": "*********0000",
+      "extracted": null,
+      "duration_ms": 233,
+      "attempts": 1,
+      "expectation": null,
+      "detail": ""
+    },
+    {
+      "id": "s3",
+      "intent": "Enter the amount to post",
+      "action": "type",
+      "status": "ok",
+      "resolution": {
+        "ok": true,
+        "ref": "e14",
+        "strategy_index": 0,
+        "strategy_kind": "label",
+        "confidence": 0.9,
+        "candidates": 1,
+        "degraded": false,
+        "reason": "verified"
+      },
+      "value_sent": "250.00",
+      "extracted": null,
+      "duration_ms": 129,
+      "attempts": 1,
+      "expectation": null,
+      "detail": ""
+    }
+  ],
+  "recoveries": [
+    {
+      "at_step": "session",
+      "rule": "sign_on_coreserv",
+      "kind": "reauth",
+      "detail": "re-auth success",
+      "attempts": 1
+    }
+  ],
+  "failure": {
+    "code": "APPROVAL_REQUIRED",
+    "step_id": "s4",
+    "step_intent": "Commit the posting to the core ledger",
+    "expected": "{\"text_present\":\"POSTING COMMITTED\"}",
+    "observed": "step 's4' is classified irreversible ('POST TRANSACTION button') and requires human approval",
+    "resolution": null,
+    "route": "http://127.0.0.1:8799/desk",
+    "screen_signature": "sig_af4ad1a2dbdaa27d",
+    "frame": null,
+    "snapshot": null,
+    "hint": "This step is irreversible and no operator was available to approve it. Re-invoke with an operator console attached, or pass an explicit pre-approval. The run stopped before the step, not during it."
+  },
+  "duration_ms": 7028,
+  "llm_calls": 0,
+  "llm_tokens": 0,
+  "degraded_resolutions": 0,
+  "drift_signals": [],
+  "evidence_dir": "/home/claude/pcx/evidence/replay-20260909T042134-f42a",
+  "output_names": []
+}

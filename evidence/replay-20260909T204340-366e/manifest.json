@@ -1,0 +1,101 @@
+{
+  "run_id": "replay-20260909T204340-366e",
+  "mode": "replay",
+  "started_at": 1789001022.2694857,
+  "duration_s": 12.06,
+  "events": 20,
+  "capability": "read_member_savings_balance",
+  "version": 1,
+  "digest": "sha256:8dbe5384cffbfe0f3c6e3798a9f71885",
+  "tenant": "default",
+  "execution_type": 3,
+  "status": "business_outcome",
+  "outcome": "MEMBER_NOT_FOUND",
+  "outcome_description": "The member number is well-formed but no such record exists on the member file. A legitimate answer to a lookup, not an error.",
+  "remediation": "Confirm the member number with the caller; try a name search instead.",
+  "steps": [
+    {
+      "id": "s1",
+      "intent": "I need to navigate to the MEMBER INQUIRY function to look up member {{ inputs.member_number }}, so I'll click that link.",
+      "action": "click",
+      "status": "ok",
+      "resolution": {
+        "ok": true,
+        "ref": "e9",
+        "strategy_index": 0,
+        "strategy_kind": "role_name",
+        "confidence": 0.97,
+        "candidates": 1,
+        "degraded": false,
+        "reason": "verified"
+      },
+      "value_sent": null,
+      "extracted": null,
+      "duration_ms": 444,
+      "attempts": 1,
+      "expectation": "route_matches /^/desk$/ -> True (path=/desk)",
+      "detail": ""
+    },
+    {
+      "id": "s2",
+      "intent": "I need to type the member number into the member number field, which is the textbox e8.",
+      "action": "type",
+      "status": "ok",
+      "resolution": {
+        "ok": true,
+        "ref": "e8",
+        "strategy_index": 0,
+        "strategy_kind": "label",
+        "confidence": 0.9,
+        "candidates": 1,
+        "degraded": false,
+        "reason": "verified"
+      },
+      "value_sent": "****9999",
+      "extracted": null,
+      "duration_ms": 206,
+      "attempts": 1,
+      "expectation": null,
+      "detail": ""
+    },
+    {
+      "id": "s3",
+      "intent": "The member number is filled in and I need to click INQUIRE to look up member {{ inputs.member_number }}.",
+      "action": "click",
+      "status": "ok",
+      "resolution": {
+        "ok": true,
+        "ref": "e9",
+        "strategy_index": 0,
+        "strategy_kind": "role_name",
+        "confidence": 0.97,
+        "candidates": 1,
+        "degraded": false,
+        "reason": "verified"
+      },
+      "value_sent": null,
+      "extracted": null,
+      "duration_ms": 532,
+      "attempts": 1,
+      "expectation": null,
+      "detail": ""
+    }
+  ],
+  "recoveries": [
+    {
+      "at_step": "session",
+      "rule": "sign_on_coreserv",
+      "kind": "reauth",
+      "detail": "re-auth success",
+      "attempts": 1
+    }
+  ],
+  "failure": null,
+  "duration_ms": 10570,
+  "llm_calls": 0,
+  "llm_tokens": 0,
+  "degraded_resolutions": 0,
+  "drift_signals": [],
+  "evidence_dir": "D:\\interface_ai\\pcx\\evidence\\replay-20260909T204340-366e",
+  "output_names": []
+}

@@ -1,0 +1,21 @@
+{
+  "run_id": "discovery-20260909T034502-6b08",
+  "mode": "discovery",
+  "started_at": 1788925502.2828643,
+  "duration_s": 36.18,
+  "events": 21,
+  "capability_id": "sign_on_coreserv",
+  "status": "succeeded",
+  "stop_reason": "model reported the goal satisfied",
+  "steps": 5,
+  "model": "sonnet",
+  "usage": {
+    "input_tokens": 10,
+    "output_tokens": 528,
+    "cache_read_input_tokens": 151610,
+    "cost_usd": 0.242628
+  },
+  "outputs_bound": [
+    "signed_on_operator"
+  ]
+}

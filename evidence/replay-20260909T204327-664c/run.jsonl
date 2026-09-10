@@ -1,0 +1,25 @@
+{"seq": 1, "t": 2.184, "kind": "run_start", "mode": "replay", "capability": "read_member_savings_balance@v1", "digest": "sha256:8dbe5384cffbfe0f3c6e3798a9f71885", "execution_type": 3, "tenant": "default", "inputs": {"member_number": "****0005"}}
+{"seq": 2, "t": 3.121, "kind": "reauth", "capability": "sign_on_coreserv", "detail": "any_of[text_matches /CSV-440/ -> True; text_present 'OPERATOR SIGN ON' -> True; text_present 'OPERATOR ID' -> True]"}
+{"seq": 3, "t": 3.18, "kind": "run_start", "mode": "replay", "capability": "sign_on_coreserv@v1", "digest": "sha256:c03bc541043ad6cebb641c6f686c61fe", "execution_type": 3, "tenant": "default", "inputs": {"operator_id": "***0042", "operator_password": "[REDACTED]"}}
+{"seq": 4, "t": 3.799, "kind": "policy", "step": "s1", "allowed": true, "rule": "action", "detail": "type risk=safe", "requires_approval": false}
+{"seq": 5, "t": 3.997, "kind": "act", "step": "s1", "action": "type text='TLR0042'", "resolution": "e5 via label[0] p=0.90", "attempts": 1, "ms": 201}
+{"seq": 6, "t": 4.529, "kind": "policy", "step": "s2", "allowed": true, "rule": "action", "detail": "type risk=safe", "requires_approval": false}
+{"seq": 7, "t": 4.82, "kind": "act", "step": "s2", "action": "type text='[REDACTED]'", "resolution": "e8 via label[0] p=0.90", "attempts": 1, "ms": 291}
+{"seq": 8, "t": 5.37, "kind": "policy", "step": "s3", "allowed": true, "rule": "action", "detail": "click risk=reversible", "requires_approval": false}
+{"seq": 9, "t": 5.886, "kind": "act", "step": "s3", "action": "click", "resolution": "e11 via role_name[0] p=0.97", "attempts": 1, "ms": 516}
+{"seq": 10, "t": 6.498, "kind": "policy", "step": "s4", "allowed": true, "rule": "action", "detail": "extract risk=safe", "requires_approval": false}
+{"seq": 11, "t": 6.499, "kind": "act", "step": "s4", "action": "extract ->signed_on_operator", "resolution": "e6 via label[0] p=0.90", "attempts": 1, "ms": 1}
+{"seq": 12, "t": 7.005, "kind": "checkpoint", "id": "final", "passed": true, "detail": "route_matches /^/desk$/ -> True (path=/desk); element_present -> e6 via label[0] p=0.90"}
+{"seq": 13, "t": 7.005, "kind": "run_end", "status": "success", "outcome": "OK", "outputs": {"signed_on_operator": "R. OKONKWO"}, "llm_calls": 0, "degraded_resolutions": 0, "drift_signals": [], "duration_ms": 3826}
+{"seq": 14, "t": 7.673, "kind": "policy", "step": "s1", "allowed": true, "rule": "action", "detail": "click risk=safe", "requires_approval": false}
+{"seq": 15, "t": 8.138, "kind": "act", "step": "s1", "action": "click", "resolution": "e9 via role_name[0] p=0.97", "attempts": 1, "ms": 466}
+{"seq": 16, "t": 8.738, "kind": "policy", "step": "s2", "allowed": true, "rule": "action", "detail": "type risk=safe", "requires_approval": false}
+{"seq": 17, "t": 8.94, "kind": "act", "step": "s2", "action": "type text='10000005'", "resolution": "e8 via label[0] p=0.90", "attempts": 1, "ms": 202}
+{"seq": 18, "t": 9.484, "kind": "policy", "step": "s3", "allowed": true, "rule": "action", "detail": "click risk=safe", "requires_approval": false}
+{"seq": 19, "t": 10.033, "kind": "act", "step": "s3", "action": "click", "resolution": "e9 via role_name[0] p=0.97", "attempts": 1, "ms": 548}
+{"seq": 20, "t": 10.683, "kind": "policy", "step": "s4", "allowed": true, "rule": "action", "detail": "extract risk=safe", "requires_approval": false}
+{"seq": 21, "t": 10.685, "kind": "act", "step": "s4", "action": "extract ->savings_balance", "resolution": "e35 via label[0] p=0.90", "attempts": 1, "ms": 2}
+{"seq": 22, "t": 11.32, "kind": "policy", "step": "s5", "allowed": true, "rule": "action", "detail": "extract risk=safe", "requires_approval": false}
+{"seq": 23, "t": 11.321, "kind": "act", "step": "s5", "action": "extract ->member_name", "resolution": "e13 via label[0] p=0.90", "attempts": 1, "ms": 1}
+{"seq": 24, "t": 12.047, "kind": "checkpoint", "id": "final", "passed": true, "detail": "route_matches /^/desk$/ -> True (path=/desk); element_present -> e35 via label[0] p=0.90; element_present -> e13 via label[0] p=0.90"}
+{"seq": 25, "t": 12.048, "kind": "run_end", "status": "success", "outcome": "OK", "outputs": {"savings_balance": {"amount": 3312.87, "currency": "USD", "raw": "$3,312.87"}, "member_name": "[REDACTED:PII len=16]"}, "llm_calls": 0, "degraded_resolutions": 0, "drift_signals": [], "duration_ms": 9865}

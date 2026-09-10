@@ -1,0 +1,22 @@
+{
+  "run_id": "discovery-20260909T034714-4663",
+  "mode": "discovery",
+  "started_at": 1788925634.2092211,
+  "duration_s": 40.13,
+  "events": 37,
+  "capability_id": "read_member_savings_balance",
+  "status": "succeeded",
+  "stop_reason": "model reported the goal satisfied",
+  "steps": 6,
+  "model": "sonnet",
+  "usage": {
+    "input_tokens": 12,
+    "output_tokens": 473,
+    "cache_read_input_tokens": 181932,
+    "cost_usd": 0.307569
+  },
+  "outputs_bound": [
+    "savings_balance",
+    "member_name"
+  ]
+}

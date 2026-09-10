@@ -1,0 +1,10 @@
+tenant_id: northgate_cu
+base_url: http://127.0.0.1:8798
+label: Northgate Federal CU
+step_locator_overrides: {}
+text_overrides:
+  MEMBER: CUSTOMER
+timing_multiplier: 1.2
+disabled_steps: []
+notes: 'Same CoreServ 7.2 build, institution-configured vocabulary: MEMBER is labelled
+  CUSTOMER throughout.'

@@ -1,0 +1,431 @@
+schema_version: pcx.capability/1.0
+id: sign_on_coreserv
+version: 1
+title: Sign On Coreserv
+description: Sign on to the CoreServ teller workstation with the supplied operator credentials. Stop once
+  the workstation main screen with the left-hand function menu is displayed.
+created_at: '2026-09-09T04:10:38.029155+00:00'
+created_by_run: discovery-20260909T034502-6b08
+discovered_with_model: sonnet
+author: llm_discovery
+surface:
+  kind: web
+  adapter: pcx.surfaces.web:WebSurface
+  app:
+    vendor: Meridian Data Systems
+    product: CoreServ Teller Workstation
+    version: '7.2'
+  entrypoint: '{{ tenant.base_url }}/'
+  viewport:
+  - 1280
+  - 800
+contract:
+  summary: Sign on to the CoreServ teller workstation with the supplied operator credentials. Stop once
+    the workstation main screen with the left-hand function menu is displayed.
+  inputs:
+  - name: operator_id
+    type: string
+    description: Operator Id.
+    required: true
+    sensitivity: pii_reference
+  - name: operator_password
+    type: string
+    description: Operator Password.
+    required: true
+    sensitivity: secret
+  outputs:
+  - name: signed_on_operator
+    type: string
+    description: Signed On Operator.
+    required: true
+    sensitivity: internal
+  outcomes:
+  - code: OK
+    kind: success
+    description: The flow completed and every declared output was captured.
+    terminal: true
+    retryable: false
+    remediation: ''
+  - code: MEMBER_NOT_FOUND
+    kind: business
+    description: 'The member number is well-formed but no such record exists on the member file. A legitimate
+      answer to a lookup, not an error.
+
+      '
+    detect:
+      text_matches: MBR-404
+    terminal: true
+    retryable: false
+    remediation: Confirm the member number with the caller; try a name search instead.
+  - code: VALIDATION_ERROR
+    kind: business
+    description: 'The application rejected the supplied input before doing any work (wrong length, non-numeric,
+      amount below product minimum).
+
+      '
+    detect:
+      text_matches: MBR-00[0-9]|AMT-[0-9]{3}
+    terminal: true
+    retryable: false
+    remediation: Correct the input and re-invoke. Retrying unchanged will not help.
+  - code: PERMISSION_DENIED
+    kind: denied
+    description: 'The record carries an advisory hold, or the signed-on operator''s role is not authorized
+      for this function. Distinct from NOT_FOUND: the record exists and the caller may not see it.
+
+      '
+    detect:
+      text_matches: SEC-40[0-9]|PERMISSION DENIED
+    terminal: true
+    retryable: false
+    remediation: Route to a supervisor or to Compliance; do not retry with the same operator.
+  side_effect: reversible_write
+  idempotent: false
+  typical_duration_ms: 35700
+steps:
+- id: s1
+  intent: I see the sign-on screen with Operator ID and Password fields; I'll click the Operator ID field
+    first to type into it.
+  action: type
+  target:
+    description: unlabelled textbox
+    strategies:
+    - kind: label
+      role: textbox
+      anchor_text: 'OPERATOR ID:'
+      direction: right
+      max_distance: 420.0
+      region: main
+      note: The control immediately right of the label 'OPERATOR ID:'. This product does not associate
+        labels with inputs, so adjacency is the only semantic link available -- and it is the same link
+        a human uses.
+    - kind: label
+      role: textbox
+      anchor_text: OPERATOR SIGN ON
+      direction: below
+      max_distance: 420.0
+      region: main
+      note: The control immediately below of the label 'OPERATOR SIGN ON'. This product does not associate
+        labels with inputs, so adjacency is the only semantic link available -- and it is the same link
+        a human uses.
+    - kind: ordinal
+      role: textbox
+      region: main
+      index: 0
+      note: Positional fallback. If this is the strategy that fires, the screen has changed and the capability
+        should be reviewed.
+    verify:
+      role: textbox
+      editable: true
+      enabled: true
+      min_confidence: 0.45
+    on_ambiguity: fail
+    recorded:
+      role: textbox
+      name: ''
+      region: main
+      rect:
+        x: 520.984375
+        y: 112.0
+        w: 120.0
+        h: 15.0
+  value: '{{ inputs.operator_id }}'
+  parse: raw
+  expect_navigation: false
+  signature_hint: sig_b0d6693a993b9113
+  risk: safe
+  optional: false
+  retry:
+    attempts: 2
+    backoff_ms: 750
+    settle_ms: 300
+  timeout_ms: 15000
+- id: s2
+  intent: The operator ID is already filled in; now I need to type the password into the password field
+    e9.
+  action: type
+  target:
+    description: unlabelled textbox
+    strategies:
+    - kind: label
+      role: textbox
+      anchor_text: 'PASSWORD:'
+      direction: right
+      max_distance: 420.0
+      region: main
+      note: The control immediately right of the label 'PASSWORD:'. This product does not associate labels
+        with inputs, so adjacency is the only semantic link available -- and it is the same link a human
+        uses.
+    - kind: ordinal
+      role: textbox
+      region: main
+      index: 1
+      note: Positional fallback. If this is the strategy that fires, the screen has changed and the capability
+        should be reviewed.
+    verify:
+      role: textbox
+      editable: true
+      enabled: true
+      min_confidence: 0.45
+    on_ambiguity: fail
+    recorded:
+      role: textbox
+      name: ''
+      region: main
+      rect:
+        x: 520.984375
+        y: 141.0
+        w: 120.0
+        h: 15.0
+      rejected_strategies:
+      - 'label: verified'
+  value: '{{ inputs.operator_password }}'
+  parse: raw
+  expect_navigation: false
+  signature_hint: sig_b0d6693a993b9113
+  risk: safe
+  optional: false
+  retry:
+    attempts: 2
+    backoff_ms: 750
+    settle_ms: 300
+  timeout_ms: 15000
+- id: s3
+  intent: Both credentials are entered; now click SIGN ON to submit the login form.
+  action: click
+  target:
+    description: button 'SIGN ON'
+    strategies:
+    - kind: role_name
+      role: button
+      name: SIGN ON
+      note: Accessible name -- the most portable identity available.
+    - kind: label
+      role: button
+      anchor_text: OPERATOR SIGN ON
+      direction: below
+      max_distance: 420.0
+      region: main
+      note: The control immediately below of the label 'OPERATOR SIGN ON'. This product does not associate
+        labels with inputs, so adjacency is the only semantic link available -- and it is the same link
+        a human uses.
+    - kind: text
+      role: button
+      text: SIGN ON
+      note: Visible label text.
+    - kind: ordinal
+      role: button
+      region: main
+      index: 0
+      note: Positional fallback. If this is the strategy that fires, the screen has changed and the capability
+        should be reviewed.
+    verify:
+      role: button
+      name_pattern: SIGN\ ON
+      enabled: true
+      min_confidence: 0.45
+    on_ambiguity: fail
+    recorded:
+      role: button
+      name: SIGN ON
+      region: main
+      rect:
+        x: 524.984375
+        y: 171.0
+        w: 74.0
+        h: 12.0
+  parse: raw
+  expect:
+    route_matches: ^/desk$
+  expect_navigation: true
+  signature_hint: sig_335b4337dcb8ae5b
+  risk: reversible
+  optional: false
+  retry:
+    attempts: 2
+    backoff_ms: 750
+    settle_ms: 300
+  timeout_ms: 15000
+- id: s4
+  intent: The workstation main screen is now showing with the left-hand function menu and 'SIGNED ON AS
+    <signed_on_operator>', so I should extract the operator name before finishing.
+  action: extract
+  target:
+    description: text located by label from 'SIGNED ON AS'
+    strategies:
+    - kind: label
+      role: text
+      anchor_text: SIGNED ON AS
+      direction: right
+      max_distance: 420.0
+      region: workframe
+      note: The control immediately right of the label 'SIGNED ON AS'. This product does not associate
+        labels with inputs, so adjacency is the only semantic link available -- and it is the same link
+        a human uses.
+    - kind: ordinal
+      role: text
+      region: workframe
+      index: 1
+      note: Positional fallback. If this is the strategy that fires, the screen has changed and the capability
+        should be reviewed.
+    verify:
+      role: text
+      enabled: true
+      min_confidence: 0.45
+    on_ambiguity: fail
+    recorded:
+      role: text
+      region: workframe
+      rect:
+        x: 293.8125
+        y: 45.0
+        w: 87.390625
+        h: 15.0
+      rejected_strategies:
+      - 'label: verified'
+  bind: signed_on_operator
+  parse: raw
+  expect_navigation: false
+  signature_hint: sig_335b4337dcb8ae5b
+  risk: safe
+  optional: false
+  retry:
+    attempts: 2
+    backoff_ms: 750
+    settle_ms: 300
+  timeout_ms: 15000
+checkpoint:
+  id: final
+  description: On ^/desk$ with every declared output visible.
+  condition:
+    all_of:
+    - route_matches: ^/desk$
+    - element_present:
+        description: text located by label from 'SIGNED ON AS'
+        strategies:
+        - kind: label
+          role: text
+          anchor_text: SIGNED ON AS
+          direction: right
+          max_distance: 420.0
+          region: workframe
+          note: The control immediately right of the label 'SIGNED ON AS'. This product does not associate
+            labels with inputs, so adjacency is the only semantic link available -- and it is the same
+            link a human uses.
+        - kind: ordinal
+          role: text
+          region: workframe
+          index: 1
+          note: Positional fallback. If this is the strategy that fires, the screen has changed and the
+            capability should be reviewed.
+        verify:
+          role: text
+          enabled: true
+          min_confidence: 0.45
+        on_ambiguity: fail
+        recorded:
+          role: text
+          region: workframe
+          rect:
+            x: 293.8125
+            y: 45.0
+            w: 87.390625
+            h: 15.0
+          rejected_strategies:
+          - 'label: verified'
+  signature_hint: sig_335b4337dcb8ae5b
+recovery:
+  interstitials:
+  - name: system_notice
+    when:
+      all_of:
+      - text_present: SYSTEM NOTICE
+      - text_present: ACKNOWLEDGE
+    dismiss:
+    - id: ack_notice
+      intent: Acknowledge the maintenance notice
+      action: click
+      target:
+        description: ACKNOWLEDGE button on the notice screen
+        strategies:
+        - kind: role_name
+          role: button
+          name: ACKNOWLEDGE
+        verify:
+          role: button
+          enabled: true
+          min_confidence: 0.45
+        on_ambiguity: fail
+      parse: raw
+      expect_navigation: false
+      risk: safe
+      optional: false
+      retry:
+        attempts: 2
+        backoff_ms: 750
+        settle_ms: 300
+      timeout_ms: 15000
+    max_occurrences: 2
+    note: 'Broadcast maintenance banner. Can appear before any screen, at any point in a flow, and must
+      be acknowledged before the underlying screen renders.
+
+      '
+  transient:
+  - name: slow_host_response
+    when:
+      any_of:
+      - text_present: PLEASE WAIT
+      - text_present: PROCESSING
+    max_occurrences: 4
+    note: 'The core host link stalls under load. The page eventually renders; the correct response is
+      to wait and re-observe, not to re-submit -- a re-submit on a write flow would double-post.
+
+      '
+  hard_error:
+    any_of:
+    - text_matches: CSV-500
+    - text_present: CORESERV SYSTEM ERROR
+policy:
+  allowed_routes:
+  - ^/$
+  - ^/desk$
+  allowed_actions:
+  - click
+  - extract
+  - type
+  max_steps: 12
+  timeout_ms: 107100
+  irreversible_requires_approval: true
+  redact_patterns:
+  - TAX ID \(SSN\)\s*:?\s*[0-9-]+
+crystallization:
+  execution_type: 3
+  status: candidate
+  gates:
+    t3_to_t2_min_runs: 3
+    t3_to_t2_min_sequence_stability: 0.9
+    t2_to_t1_min_runs: 5
+    t2_to_t1_min_resolution_stability: 0.99
+    max_safety_violations: 0
+    require_acceptance_tests: true
+    require_human_review_for_t1: true
+  evidence:
+    successful_runs: 0
+    failed_runs: 0
+    distinct_input_sets: 0
+    safety_violations: 0
+    human_interventions: 0
+    action_sequence_stability: 0.0
+    resolution_stability: 0.0
+    degraded_resolutions: 0
+    drift_signals: 0
+    successful_runs_since_demotion: 0
+    failed_runs_since_demotion: 0
+    human_reviewed: false
+  acceptance_tests:
+  - name: recorded_happy_path
+    inputs_ref: recorded_happy_path
+    expect_outcome: OK
+    expect_outputs_present:
+    - signed_on_operator
+_digest: sha256:c03bc541043ad6cebb641c6f686c61fe

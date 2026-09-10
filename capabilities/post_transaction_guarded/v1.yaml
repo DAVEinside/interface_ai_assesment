@@ -1,0 +1,221 @@
+schema_version: pcx.capability/1.0
+id: post_transaction_guarded
+version: 1
+title: Post Transaction (guarded)
+description: Post a transaction to the member's account. Irreversible; requires human approval.
+created_at: '2026-09-09T03:56:47.670718+00:00'
+author: human
+surface:
+  kind: web
+  adapter: pcx.surfaces.web:WebSurface
+  app:
+    vendor: Meridian Data Systems
+    product: CoreServ Teller Workstation
+    version: '7.2'
+  entrypoint: '{{ tenant.base_url }}/desk'
+  viewport:
+  - 1280
+  - 800
+contract:
+  summary: Post a transaction to a member account and reach the posting confirmation.
+  inputs:
+  - name: account
+    type: string
+    description: Account number with suffix, in the form NNNNNNNN-NNNN.
+    required: true
+    sensitivity: pii_reference
+  - name: amount
+    type: string
+    description: Signed amount to post.
+    required: true
+    pattern: -?[0-9]+\.[0-9]{2}
+    sensitivity: internal
+  outcomes:
+  - code: OK
+    kind: success
+    description: The posting was committed and the confirmation screen was reached.
+    terminal: true
+    retryable: false
+    remediation: ''
+  - code: PERMISSION_DENIED
+    kind: denied
+    description: The signed-on operator is not authorized to post.
+    detect:
+      text_matches: SEC-40[0-9]|PERMISSION DENIED
+    terminal: true
+    retryable: false
+    remediation: Route to a supervisor.
+  side_effect: irreversible_write
+  idempotent: false
+  typical_duration_ms: 0
+steps:
+- id: s1
+  intent: Open the transaction posting screen from the function menu
+  action: click
+  target:
+    description: TRANSACTION POSTING link in the function menu
+    strategies:
+    - kind: role_name
+      role: link
+      name: TRANSACTION POSTING
+    - kind: text
+      role: link
+      text: TRANSACTION POSTING
+    verify:
+      role: link
+      enabled: true
+      min_confidence: 0.45
+    on_ambiguity: fail
+  parse: raw
+  expect_navigation: false
+  risk: safe
+  optional: false
+  retry:
+    attempts: 2
+    backoff_ms: 750
+    settle_ms: 300
+  timeout_ms: 15000
+- id: s2
+  intent: Enter the account number
+  action: type
+  target:
+    description: account field on the posting screen
+    strategies:
+    - kind: label
+      role: textbox
+      anchor_text: 'ACCOUNT:'
+      direction: right
+      max_distance: 420.0
+      region: workframe
+    - kind: ordinal
+      role: textbox
+      region: workframe
+      index: 0
+    verify:
+      role: textbox
+      editable: true
+      enabled: true
+      min_confidence: 0.45
+    on_ambiguity: fail
+  value: '{{ inputs.account }}'
+  parse: raw
+  expect_navigation: false
+  risk: safe
+  optional: false
+  retry:
+    attempts: 2
+    backoff_ms: 750
+    settle_ms: 300
+  timeout_ms: 15000
+- id: s3
+  intent: Enter the amount to post
+  action: type
+  target:
+    description: amount field on the posting screen
+    strategies:
+    - kind: label
+      role: textbox
+      anchor_text: 'AMOUNT:'
+      direction: right
+      max_distance: 420.0
+      region: workframe
+    - kind: ordinal
+      role: textbox
+      region: workframe
+      index: 1
+    verify:
+      role: textbox
+      editable: true
+      enabled: true
+      min_confidence: 0.45
+    on_ambiguity: fail
+  value: '{{ inputs.amount }}'
+  parse: raw
+  expect_navigation: false
+  risk: safe
+  optional: false
+  retry:
+    attempts: 2
+    backoff_ms: 750
+    settle_ms: 300
+  timeout_ms: 15000
+- id: s4
+  intent: Commit the posting to the core ledger
+  action: click
+  target:
+    description: POST TRANSACTION button
+    strategies:
+    - kind: role_name
+      role: button
+      name: POST TRANSACTION
+    verify:
+      role: button
+      enabled: true
+      min_confidence: 0.45
+    on_ambiguity: fail
+  parse: raw
+  expect:
+    text_present: POSTING COMMITTED
+  expect_navigation: false
+  risk: irreversible
+  optional: false
+  retry:
+    attempts: 2
+    backoff_ms: 750
+    settle_ms: 300
+  timeout_ms: 15000
+checkpoint:
+  id: final
+  description: The posting confirmation screen is displayed.
+  condition:
+    all_of:
+    - text_present: POSTING COMMITTED
+recovery:
+  session_expired:
+    any_of:
+    - text_matches: CSV-440
+    - all_of:
+      - text_present: OPERATOR SIGN ON
+      - text_present: OPERATOR ID
+  reauth_capability: sign_on_coreserv
+  hard_error:
+    any_of:
+    - text_matches: CSV-500
+policy:
+  allowed_routes:
+  - ^/desk$
+  allowed_actions:
+  - click
+  - type
+  max_steps: 10
+  timeout_ms: 180000
+  irreversible_requires_approval: true
+crystallization:
+  execution_type: 1
+  status: active
+  gates:
+    t3_to_t2_min_runs: 3
+    t3_to_t2_min_sequence_stability: 0.9
+    t2_to_t1_min_runs: 5
+    t2_to_t1_min_resolution_stability: 0.99
+    max_safety_violations: 0
+    require_acceptance_tests: true
+    require_human_review_for_t1: true
+  evidence:
+    successful_runs: 0
+    failed_runs: 0
+    distinct_input_sets: 0
+    safety_violations: 0
+    human_interventions: 0
+    action_sequence_stability: 0.0
+    resolution_stability: 0.0
+    degraded_resolutions: 0
+    drift_signals: 0
+    tenants_seen:
+    - default
+    successful_runs_since_demotion: 0
+    failed_runs_since_demotion: 0
+    human_reviewed: false
+  hybrid_steps:
+  - s4
+_digest: sha256:7c8b2f0408dfd54ae5fd84df093929da

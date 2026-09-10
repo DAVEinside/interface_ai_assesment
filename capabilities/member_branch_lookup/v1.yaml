@@ -1,0 +1,548 @@
+schema_version: pcx.capability/1.0
+id: member_branch_lookup
+version: 1
+title: Member Branch Lookup
+description: Look up member {{ inputs.member_number }} in the CoreServ member inquiry screen and read
+  back their member name and the branch they belong to.
+created_at: '2026-09-10T01:19:24.568801+00:00'
+created_by_run: discovery-20260909T211825-bd85
+discovered_with_model: claude-sonnet-4-5-20250929
+author: llm_discovery
+surface:
+  kind: web
+  adapter: pcx.surfaces.web:WebSurface
+  app:
+    vendor: Meridian Data Systems
+    product: CoreServ Teller Workstation
+    version: '7.2'
+  entrypoint: '{{ tenant.base_url }}/desk'
+  viewport:
+  - 1280
+  - 800
+contract:
+  summary: Look up member {{ inputs.member_number }} in the CoreServ member inquiry screen and read back
+    their member name and the branch they belong to.
+  inputs:
+  - name: member_number
+    type: string
+    description: Member Number (8 digits).
+    required: true
+    pattern: \d{8}
+    sensitivity: pii_reference
+  outputs:
+  - name: member_name
+    type: string
+    description: Member Name.
+    required: true
+    sensitivity: pii
+  - name: branch
+    type: string
+    description: Branch.
+    required: true
+    sensitivity: internal
+  outcomes:
+  - code: OK
+    kind: success
+    description: The flow completed and every declared output was captured.
+    terminal: true
+    retryable: false
+    remediation: ''
+  - code: MEMBER_NOT_FOUND
+    kind: business
+    description: 'The member number is well-formed but no such record exists on the member file. A legitimate
+      answer to a lookup, not an error.
+
+      '
+    detect:
+      text_matches: MBR-404
+    terminal: true
+    retryable: false
+    remediation: Confirm the member number with the caller; try a name search instead.
+  - code: VALIDATION_ERROR
+    kind: business
+    description: 'The application rejected the supplied input before doing any work (wrong length, non-numeric,
+      amount below product minimum).
+
+      '
+    detect:
+      text_matches: MBR-00[0-9]|AMT-[0-9]{3}
+    terminal: true
+    retryable: false
+    remediation: Correct the input and re-invoke. Retrying unchanged will not help.
+  - code: PERMISSION_DENIED
+    kind: denied
+    description: 'The record carries an advisory hold, or the signed-on operator''s role is not authorized
+      for this function. Distinct from NOT_FOUND: the record exists and the caller may not see it.
+
+      '
+    detect:
+      text_matches: SEC-40[0-9]|PERMISSION DENIED
+    terminal: true
+    retryable: false
+    remediation: Route to a supervisor or to Compliance; do not retry with the same operator.
+  side_effect: read_only
+  idempotent: true
+  typical_duration_ms: 30720
+steps:
+- id: s1
+  intent: I can see the main menu with 'MEMBER INQUIRY' option available on the left. I need to click
+    on it to access the member inquiry screen where I can look up member {{ inputs.member_number }}.
+  action: click
+  target:
+    description: link 'MEMBER INQUIRY'
+    strategies:
+    - kind: role_name
+      role: link
+      name: MEMBER INQUIRY
+      note: Accessible name -- the most portable identity available.
+    - kind: label
+      role: link
+      anchor_text: FUNCTIONS
+      direction: below
+      max_distance: 420.0
+      region: navframe
+      note: The control immediately below of the label 'FUNCTIONS'. This product does not associate labels
+        with inputs, so adjacency is the only semantic link available -- and it is the same link a human
+        uses.
+    - kind: text
+      role: link
+      text: MEMBER INQUIRY
+      note: Visible label text.
+    - kind: ordinal
+      role: link
+      region: navframe
+      index: 0
+      note: Positional fallback. If this is the strategy that fires, the screen has changed and the capability
+        should be reviewed.
+    verify:
+      role: link
+      name_pattern: MEMBER\ INQUIRY
+      enabled: true
+      min_confidence: 0.45
+    on_ambiguity: fail
+    recorded:
+      role: link
+      name: MEMBER INQUIRY
+      region: navframe
+      rect:
+        x: 3.0
+        y: 60.20000076293945
+        w: 114.61250305175781
+        h: 14.39999771118164
+  parse: raw
+  expect:
+    route_matches: ^/desk$
+  expect_navigation: true
+  signature_hint: sig_2abe72c1f62fc5f1
+  risk: safe
+  optional: false
+  retry:
+    attempts: 2
+    backoff_ms: 750
+    settle_ms: 300
+  timeout_ms: 15000
+- id: s2
+  intent: I see the Member Inquiry screen with an empty MEMBER NUMBER field (e8) and an INQUIRE button
+    (e9). I need to enter the member number {{ inputs.member_number }} into the text field.
+  action: type
+  target:
+    description: unlabelled textbox
+    strategies:
+    - kind: label
+      role: textbox
+      anchor_text: 'MEMBER NUMBER:'
+      direction: right
+      max_distance: 420.0
+      region: workframe
+      note: The control immediately right of the label 'MEMBER NUMBER:'. This product does not associate
+        labels with inputs, so adjacency is the only semantic link available -- and it is the same link
+        a human uses.
+    - kind: label
+      role: textbox
+      anchor_text: MEMBER INQUIRY
+      direction: below
+      max_distance: 420.0
+      region: workframe
+      note: The control immediately below of the label 'MEMBER INQUIRY'. This product does not associate
+        labels with inputs, so adjacency is the only semantic link available -- and it is the same link
+        a human uses.
+    - kind: ordinal
+      role: textbox
+      region: workframe
+      index: 0
+      note: Positional fallback. If this is the strategy that fires, the screen has changed and the capability
+        should be reviewed.
+    verify:
+      role: textbox
+      editable: true
+      enabled: true
+      min_confidence: 0.45
+    on_ambiguity: fail
+    recorded:
+      role: textbox
+      name: ''
+      region: workframe
+      rect:
+        x: 333.0249938964844
+        y: 52.20000076293945
+        w: 97.60000610351562
+        h: 15.200000762939453
+  value: '{{ inputs.member_number }}'
+  parse: raw
+  expect_navigation: false
+  signature_hint: sig_2abe72c1f62fc5f1
+  risk: safe
+  optional: false
+  retry:
+    attempts: 2
+    backoff_ms: 750
+    settle_ms: 300
+  timeout_ms: 15000
+- id: s3
+  intent: I can see the member number {{ inputs.member_number }} is entered in the MEMBER NUMBER field.
+    I need to click the INQUIRE button (e9) to perform the lookup and retrieve the member information.
+  action: click
+  target:
+    description: button 'INQUIRE'
+    strategies:
+    - kind: role_name
+      role: button
+      name: INQUIRE
+      note: Accessible name -- the most portable identity available.
+    - kind: label
+      role: button
+      anchor_text: 'MEMBER NUMBER:'
+      direction: right
+      max_distance: 420.0
+      region: workframe
+      note: The control immediately right of the label 'MEMBER NUMBER:'. This product does not associate
+        labels with inputs, so adjacency is the only semantic link available -- and it is the same link
+        a human uses.
+    - kind: label
+      role: button
+      anchor_text: MEMBER INQUIRY
+      direction: below
+      max_distance: 420.0
+      region: workframe
+      note: The control immediately below of the label 'MEMBER INQUIRY'. This product does not associate
+        labels with inputs, so adjacency is the only semantic link available -- and it is the same link
+        a human uses.
+    - kind: text
+      role: button
+      text: INQUIRE
+      note: Visible label text.
+    - kind: ordinal
+      role: button
+      region: workframe
+      index: 0
+      note: Positional fallback. If this is the strategy that fires, the screen has changed and the capability
+        should be reviewed.
+    verify:
+      role: button
+      name_pattern: INQUIRE
+      enabled: true
+      min_confidence: 0.45
+    on_ambiguity: fail
+    recorded:
+      role: button
+      name: INQUIRE
+      region: workframe
+      rect:
+        x: 449.82501220703125
+        y: 53.79999923706055
+        w: 64.79998779296875
+        h: 12.000003814697266
+  parse: raw
+  expect:
+    route_matches: ^/desk$
+  expect_navigation: true
+  signature_hint: sig_c68985f8331cb3b6
+  risk: safe
+  optional: false
+  retry:
+    attempts: 2
+    backoff_ms: 750
+    settle_ms: 300
+  timeout_ms: 15000
+- id: s4
+  intent: I can see the member inquiry screen is displaying the information for member {{ inputs.member_number
+    }}. The member name is '<member_name>' (shown in e13) and the branch is '<branch>' (shown in e9).
+    I need to extract both of these values.
+  action: extract
+  target:
+    description: cell located by label from 'NAME:'
+    strategies:
+    - kind: label
+      role: cell
+      anchor_text: 'NAME:'
+      direction: right
+      max_distance: 420.0
+      region: workframe
+      note: The control immediately right of the label 'NAME:'. This product does not associate labels
+        with inputs, so adjacency is the only semantic link available -- and it is the same link a human
+        uses.
+    - kind: ordinal
+      role: cell
+      region: workframe
+      index: 7
+      note: Positional fallback. If this is the strategy that fires, the screen has changed and the capability
+        should be reviewed.
+    verify:
+      role: cell
+      enabled: true
+      min_confidence: 0.45
+    on_ambiguity: fail
+    recorded:
+      role: cell
+      region: workframe
+      rect:
+        x: 326.4250183105469
+        y: 73.0
+        w: 132.625
+        h: 18.400001525878906
+      rejected_strategies:
+      - 'row_cell: [0] row_cell: 0 candidates'
+      - 'row_cell: [0] row_cell: 0 candidates'
+      - 'label: verified'
+  bind: member_name
+  parse: raw
+  expect_navigation: false
+  signature_hint: sig_c68985f8331cb3b6
+  risk: safe
+  optional: false
+  retry:
+    attempts: 2
+    backoff_ms: 750
+    settle_ms: 300
+  timeout_ms: 15000
+- id: s5
+  intent: I can see member {{ inputs.member_number }} (Dimitri S. Volkov) is displayed with branch <branch>.
+    I already extracted the member_name in step 4, now I need to extract the branch value.
+  action: extract
+  target:
+    description: cell located by label from 'BRANCH:'
+    strategies:
+    - kind: label
+      role: cell
+      anchor_text: 'BRANCH:'
+      direction: right
+      max_distance: 420.0
+      region: workframe
+      note: The control immediately right of the label 'BRANCH:'. This product does not associate labels
+        with inputs, so adjacency is the only semantic link available -- and it is the same link a human
+        uses.
+    - kind: ordinal
+      role: cell
+      region: workframe
+      index: 5
+      note: Positional fallback. If this is the strategy that fires, the screen has changed and the capability
+        should be reviewed.
+    verify:
+      role: cell
+      enabled: true
+      min_confidence: 0.45
+    on_ambiguity: fail
+    recorded:
+      role: cell
+      region: workframe
+      rect:
+        x: 611.0750122070312
+        y: 48.60000228881836
+        w: 117.0250244140625
+        h: 18.39999771118164
+      rejected_strategies:
+      - 'row_cell: verified'
+      - 'row_cell: verified'
+      - 'label: verified'
+  bind: branch
+  parse: raw
+  expect_navigation: false
+  signature_hint: sig_c68985f8331cb3b6
+  risk: safe
+  optional: false
+  retry:
+    attempts: 2
+    backoff_ms: 750
+    settle_ms: 300
+  timeout_ms: 15000
+checkpoint:
+  id: final
+  description: On ^/desk$ with every declared output visible.
+  condition:
+    all_of:
+    - route_matches: ^/desk$
+    - element_present:
+        description: cell located by label from 'NAME:'
+        strategies:
+        - kind: label
+          role: cell
+          anchor_text: 'NAME:'
+          direction: right
+          max_distance: 420.0
+          region: workframe
+          note: The control immediately right of the label 'NAME:'. This product does not associate labels
+            with inputs, so adjacency is the only semantic link available -- and it is the same link a
+            human uses.
+        - kind: ordinal
+          role: cell
+          region: workframe
+          index: 7
+          note: Positional fallback. If this is the strategy that fires, the screen has changed and the
+            capability should be reviewed.
+        verify:
+          role: cell
+          enabled: true
+          min_confidence: 0.45
+        on_ambiguity: fail
+        recorded:
+          role: cell
+          region: workframe
+          rect:
+            x: 326.4250183105469
+            y: 73.0
+            w: 132.625
+            h: 18.400001525878906
+          rejected_strategies:
+          - 'row_cell: [0] row_cell: 0 candidates'
+          - 'row_cell: [0] row_cell: 0 candidates'
+          - 'label: verified'
+    - element_present:
+        description: cell located by label from 'BRANCH:'
+        strategies:
+        - kind: label
+          role: cell
+          anchor_text: 'BRANCH:'
+          direction: right
+          max_distance: 420.0
+          region: workframe
+          note: The control immediately right of the label 'BRANCH:'. This product does not associate
+            labels with inputs, so adjacency is the only semantic link available -- and it is the same
+            link a human uses.
+        - kind: ordinal
+          role: cell
+          region: workframe
+          index: 5
+          note: Positional fallback. If this is the strategy that fires, the screen has changed and the
+            capability should be reviewed.
+        verify:
+          role: cell
+          enabled: true
+          min_confidence: 0.45
+        on_ambiguity: fail
+        recorded:
+          role: cell
+          region: workframe
+          rect:
+            x: 611.0750122070312
+            y: 48.60000228881836
+            w: 117.0250244140625
+            h: 18.39999771118164
+          rejected_strategies:
+          - 'row_cell: verified'
+          - 'row_cell: verified'
+          - 'label: verified'
+  signature_hint: sig_c68985f8331cb3b6
+recovery:
+  interstitials:
+  - name: system_notice
+    when:
+      all_of:
+      - text_present: SYSTEM NOTICE
+      - text_present: ACKNOWLEDGE
+    dismiss:
+    - id: ack_notice
+      intent: Acknowledge the maintenance notice
+      action: click
+      target:
+        description: ACKNOWLEDGE button on the notice screen
+        strategies:
+        - kind: role_name
+          role: button
+          name: ACKNOWLEDGE
+        verify:
+          role: button
+          enabled: true
+          min_confidence: 0.45
+        on_ambiguity: fail
+      parse: raw
+      expect_navigation: false
+      risk: safe
+      optional: false
+      retry:
+        attempts: 2
+        backoff_ms: 750
+        settle_ms: 300
+      timeout_ms: 15000
+    max_occurrences: 2
+    note: 'Broadcast maintenance banner. Can appear before any screen, at any point in a flow, and must
+      be acknowledged before the underlying screen renders.
+
+      '
+  transient:
+  - name: slow_host_response
+    when:
+      any_of:
+      - text_present: PLEASE WAIT
+      - text_present: PROCESSING
+    max_occurrences: 4
+    note: 'The core host link stalls under load. The page eventually renders; the correct response is
+      to wait and re-observe, not to re-submit -- a re-submit on a write flow would double-post.
+
+      '
+  session_expired:
+    any_of:
+    - text_matches: CSV-440
+    - all_of:
+      - text_present: OPERATOR SIGN ON
+      - text_present: OPERATOR ID
+  reauth_capability: sign_on_coreserv
+  hard_error:
+    any_of:
+    - text_matches: CSV-500
+    - text_present: CORESERV SYSTEM ERROR
+policy:
+  allowed_routes:
+  - ^/desk$
+  allowed_actions:
+  - click
+  - extract
+  - type
+  max_steps: 13
+  timeout_ms: 92160
+  irreversible_requires_approval: true
+  redact_patterns:
+  - TAX ID \(SSN\)\s*:?\s*[0-9-]+
+crystallization:
+  execution_type: 3
+  status: candidate
+  gates:
+    t3_to_t2_min_runs: 3
+    t3_to_t2_min_sequence_stability: 0.9
+    t2_to_t1_min_runs: 5
+    t2_to_t1_min_resolution_stability: 0.99
+    max_safety_violations: 0
+    require_acceptance_tests: true
+    require_human_review_for_t1: true
+  evidence:
+    successful_runs: 1
+    failed_runs: 0
+    distinct_input_sets: 1
+    safety_violations: 0
+    human_interventions: 0
+    action_sequence_stability: 1.0
+    resolution_stability: 1.0
+    degraded_resolutions: 0
+    drift_signals: 0
+    tenants_seen:
+    - default
+    successful_runs_since_demotion: 0
+    failed_runs_since_demotion: 0
+    human_reviewed: false
+  acceptance_tests:
+  - name: recorded_happy_path
+    inputs_ref: recorded_happy_path
+    expect_outcome: OK
+    expect_outputs_present:
+    - member_name
+    - branch
+_digest: sha256:91dc669099d1a78356efee5e0b95427a

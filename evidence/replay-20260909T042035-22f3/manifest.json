@@ -1,0 +1,101 @@
+{
+  "run_id": "replay-20260909T042035-22f3",
+  "mode": "replay",
+  "started_at": 1788927635.48699,
+  "duration_s": 7.51,
+  "events": 20,
+  "capability": "read_member_savings_balance",
+  "version": 1,
+  "digest": "sha256:8dbe5384cffbfe0f3c6e3798a9f71885",
+  "tenant": "default",
+  "execution_type": 2,
+  "status": "business_outcome",
+  "outcome": "PERMISSION_DENIED",
+  "outcome_description": "The record carries an advisory hold, or the signed-on operator's role is not authorized for this function. Distinct from NOT_FOUND: the record exists and the caller may not see it.",
+  "remediation": "Route to a supervisor or to Compliance; do not retry with the same operator.",
+  "steps": [
+    {
+      "id": "s1",
+      "intent": "I need to navigate to the MEMBER INQUIRY function to look up member {{ inputs.member_number }}, so I'll click that link.",
+      "action": "click",
+      "status": "ok",
+      "resolution": {
+        "ok": true,
+        "ref": "e9",
+        "strategy_index": 0,
+        "strategy_kind": "role_name",
+        "confidence": 0.97,
+        "candidates": 1,
+        "degraded": false,
+        "reason": "verified"
+      },
+      "value_sent": null,
+      "extracted": null,
+      "duration_ms": 361,
+      "attempts": 1,
+      "expectation": "route_matches /^/desk$/ -> True (path=/desk)",
+      "detail": ""
+    },
+    {
+      "id": "s2",
+      "intent": "I need to type the member number into the member number field, which is the textbox e8.",
+      "action": "type",
+      "status": "ok",
+      "resolution": {
+        "ok": true,
+        "ref": "e8",
+        "strategy_index": 0,
+        "strategy_kind": "label",
+        "confidence": 0.9,
+        "candidates": 1,
+        "degraded": false,
+        "reason": "verified"
+      },
+      "value_sent": "****0003",
+      "extracted": null,
+      "duration_ms": 164,
+      "attempts": 1,
+      "expectation": null,
+      "detail": ""
+    },
+    {
+      "id": "s3",
+      "intent": "The member number is filled in and I need to click INQUIRE to look up member {{ inputs.member_number }}.",
+      "action": "click",
+      "status": "ok",
+      "resolution": {
+        "ok": true,
+        "ref": "e9",
+        "strategy_index": 0,
+        "strategy_kind": "role_name",
+        "confidence": 0.97,
+        "candidates": 1,
+        "degraded": false,
+        "reason": "verified"
+      },
+      "value_sent": null,
+      "extracted": null,
+      "duration_ms": 358,
+      "attempts": 1,
+      "expectation": null,
+      "detail": ""
+    }
+  ],
+  "recoveries": [
+    {
+      "at_step": "session",
+      "rule": "sign_on_coreserv",
+      "kind": "reauth",
+      "detail": "re-auth success",
+      "attempts": 1
+    }
+  ],
+  "failure": null,
+  "duration_ms": 7039,
+  "llm_calls": 0,
+  "llm_tokens": 0,
+  "degraded_resolutions": 0,
+  "drift_signals": [],
+  "evidence_dir": "/home/claude/pcx/evidence/replay-20260909T042035-22f3",
+  "output_names": []
+}

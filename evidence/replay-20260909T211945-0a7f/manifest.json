@@ -1,0 +1,148 @@
+{
+  "run_id": "replay-20260909T211945-0a7f",
+  "mode": "replay",
+  "started_at": 1789003188.2725031,
+  "duration_s": 14.1,
+  "events": 25,
+  "capability": "member_branch_lookup",
+  "version": 1,
+  "digest": "sha256:91dc669099d1a78356efee5e0b95427a",
+  "tenant": "default",
+  "execution_type": 3,
+  "status": "success",
+  "outcome": "OK",
+  "outcome_description": "",
+  "remediation": "",
+  "steps": [
+    {
+      "id": "s1",
+      "intent": "I can see the main menu with 'MEMBER INQUIRY' option available on the left. I need to click on it to access the member inquiry screen where I can look up member {{ inputs.member_number }}.",
+      "action": "click",
+      "status": "ok",
+      "resolution": {
+        "ok": true,
+        "ref": "e9",
+        "strategy_index": 0,
+        "strategy_kind": "role_name",
+        "confidence": 0.97,
+        "candidates": 1,
+        "degraded": false,
+        "reason": "verified"
+      },
+      "value_sent": null,
+      "extracted": null,
+      "duration_ms": 464,
+      "attempts": 1,
+      "expectation": "route_matches /^/desk$/ -> True (path=/desk)",
+      "detail": ""
+    },
+    {
+      "id": "s2",
+      "intent": "I see the Member Inquiry screen with an empty MEMBER NUMBER field (e8) and an INQUIRE button (e9). I need to enter the member number {{ inputs.member_number }} into the text field.",
+      "action": "type",
+      "status": "ok",
+      "resolution": {
+        "ok": true,
+        "ref": "e8",
+        "strategy_index": 0,
+        "strategy_kind": "label",
+        "confidence": 0.9,
+        "candidates": 1,
+        "degraded": false,
+        "reason": "verified"
+      },
+      "value_sent": "****0001",
+      "extracted": null,
+      "duration_ms": 202,
+      "attempts": 1,
+      "expectation": null,
+      "detail": ""
+    },
+    {
+      "id": "s3",
+      "intent": "I can see the member number {{ inputs.member_number }} is entered in the MEMBER NUMBER field. I need to click the INQUIRE button (e9) to perform the lookup and retrieve the member information.",
+      "action": "click",
+      "status": "ok",
+      "resolution": {
+        "ok": true,
+        "ref": "e9",
+        "strategy_index": 0,
+        "strategy_kind": "role_name",
+        "confidence": 0.97,
+        "candidates": 1,
+        "degraded": false,
+        "reason": "verified"
+      },
+      "value_sent": null,
+      "extracted": null,
+      "duration_ms": 584,
+      "attempts": 1,
+      "expectation": "route_matches /^/desk$/ -> True (path=/desk)",
+      "detail": ""
+    },
+    {
+      "id": "s4",
+      "intent": "I can see the member inquiry screen is displaying the information for member {{ inputs.member_number }}. The member name is '<member_name>' (shown in e13) and the branch is '<branch>' (shown in e9). I need to extract both of these values.",
+      "action": "extract",
+      "status": "ok",
+      "resolution": {
+        "ok": true,
+        "ref": "e13",
+        "strategy_index": 0,
+        "strategy_kind": "label",
+        "confidence": 0.9,
+        "candidates": 1,
+        "degraded": false,
+        "reason": "verified"
+      },
+      "value_sent": null,
+      "extracted": "ALICE T. NGUYEN",
+      "duration_ms": 3,
+      "attempts": 1,
+      "expectation": null,
+      "detail": ""
+    },
+    {
+      "id": "s5",
+      "intent": "I can see member {{ inputs.member_number }} (Dimitri S. Volkov) is displayed with branch <branch>. I already extracted the member_name in step 4, now I need to extract the branch value.",
+      "action": "extract",
+      "status": "ok",
+      "resolution": {
+        "ok": true,
+        "ref": "e9",
+        "strategy_index": 0,
+        "strategy_kind": "label",
+        "confidence": 0.9,
+        "candidates": 1,
+        "degraded": false,
+        "reason": "verified"
+      },
+      "value_sent": null,
+      "extracted": "003 - RIVERSIDE",
+      "duration_ms": 3,
+      "attempts": 1,
+      "expectation": null,
+      "detail": ""
+    }
+  ],
+  "recoveries": [
+    {
+      "at_step": "session",
+      "rule": "sign_on_coreserv",
+      "kind": "reauth",
+      "detail": "re-auth success",
+      "attempts": 1
+    }
+  ],
+  "failure": null,
+  "duration_ms": 11699,
+  "llm_calls": 0,
+  "llm_tokens": 0,
+  "degraded_resolutions": 0,
+  "drift_signals": [],
+  "evidence_dir": "D:\\interface_ai\\pcx\\evidence\\replay-20260909T211945-0a7f",
+  "output_names": [
+    "member_name",
+    "branch"
+  ]
+}

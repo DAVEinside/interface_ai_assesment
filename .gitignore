@@ -5,3 +5,9 @@ __pycache__/
 .venv/
 venv/
 .env
+
+# recorded against. They stay on the machine that recorded it.
+capabilities/*/fixtures/
+
+# deliberately; see evidence/README.md.
+evidence/scratch/

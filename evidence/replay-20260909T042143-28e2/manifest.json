@@ -1,0 +1,123 @@
+{
+  "run_id": "replay-20260909T042143-28e2",
+  "mode": "replay",
+  "started_at": 1788927703.49126,
+  "duration_s": 8.48,
+  "events": 23,
+  "capability": "post_transaction_guarded",
+  "version": 1,
+  "digest": "sha256:7c8b2f0408dfd54ae5fd84df093929da",
+  "tenant": "default",
+  "execution_type": 1,
+  "status": "success",
+  "outcome": "OK",
+  "outcome_description": "",
+  "remediation": "",
+  "steps": [
+    {
+      "id": "s1",
+      "intent": "Open the transaction posting screen from the function menu",
+      "action": "click",
+      "status": "ok",
+      "resolution": {
+        "ok": true,
+        "ref": "e14",
+        "strategy_index": 0,
+        "strategy_kind": "role_name",
+        "confidence": 0.97,
+        "candidates": 1,
+        "degraded": false,
+        "reason": "verified"
+      },
+      "value_sent": null,
+      "extracted": null,
+      "duration_ms": 433,
+      "attempts": 1,
+      "expectation": null,
+      "detail": ""
+    },
+    {
+      "id": "s2",
+      "intent": "Enter the account number",
+      "action": "type",
+      "status": "ok",
+      "resolution": {
+        "ok": true,
+        "ref": "e7",
+        "strategy_index": 0,
+        "strategy_kind": "label",
+        "confidence": 0.9,
+        "candidates": 1,
+        "degraded": false,
+        "reason": "verified"
+      },
+      "value_sent": "*********0000",
+      "extracted": null,
+      "duration_ms": 238,
+      "attempts": 1,
+      "expectation": null,
+      "detail": ""
+    },
+    {
+      "id": "s3",
+      "intent": "Enter the amount to post",
+      "action": "type",
+      "status": "ok",
+      "resolution": {
+        "ok": true,
+        "ref": "e14",
+        "strategy_index": 0,
+        "strategy_kind": "label",
+        "confidence": 0.9,
+        "candidates": 1,
+        "degraded": false,
+        "reason": "verified"
+      },
+      "value_sent": "250.00",
+      "extracted": null,
+      "duration_ms": 133,
+      "attempts": 1,
+      "expectation": null,
+      "detail": ""
+    },
+    {
+      "id": "s4",
+      "intent": "Commit the posting to the core ledger",
+      "action": "click",
+      "status": "ok",
+      "resolution": {
+        "ok": true,
+        "ref": "e19",
+        "strategy_index": 0,
+        "strategy_kind": "role_name",
+        "confidence": 0.97,
+        "candidates": 1,
+        "degraded": false,
+        "reason": "verified"
+      },
+      "value_sent": null,
+      "extracted": null,
+      "duration_ms": 359,
+      "attempts": 1,
+      "expectation": "text_present 'POSTING COMMITTED' -> True",
+      "detail": ""
+    }
+  ],
+  "recoveries": [
+    {
+      "at_step": "session",
+      "rule": "sign_on_coreserv",
+      "kind": "reauth",
+      "detail": "re-auth success",
+      "attempts": 1
+    }
+  ],
+  "failure": null,
+  "duration_ms": 8036,
+  "llm_calls": 0,
+  "llm_tokens": 0,
+  "degraded_resolutions": 0,
+  "drift_signals": [],
+  "evidence_dir": "/home/claude/pcx/evidence/replay-20260909T042143-28e2",
+  "output_names": []
+}

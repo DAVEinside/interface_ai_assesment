@@ -1,0 +1,152 @@
+{
+  "run_id": "replay-20260909T042016-0889",
+  "mode": "replay",
+  "started_at": 1788927617.064786,
+  "duration_s": 9.36,
+  "events": 25,
+  "capability": "read_member_savings_balance",
+  "version": 1,
+  "digest": "sha256:8dbe5384cffbfe0f3c6e3798a9f71885",
+  "tenant": "default",
+  "execution_type": 2,
+  "status": "success",
+  "outcome": "OK",
+  "outcome_description": "",
+  "remediation": "",
+  "steps": [
+    {
+      "id": "s1",
+      "intent": "I need to navigate to the MEMBER INQUIRY function to look up member {{ inputs.member_number }}, so I'll click that link.",
+      "action": "click",
+      "status": "ok",
+      "resolution": {
+        "ok": true,
+        "ref": "e9",
+        "strategy_index": 0,
+        "strategy_kind": "role_name",
+        "confidence": 0.97,
+        "candidates": 1,
+        "degraded": false,
+        "reason": "verified"
+      },
+      "value_sent": null,
+      "extracted": null,
+      "duration_ms": 423,
+      "attempts": 1,
+      "expectation": "route_matches /^/desk$/ -> True (path=/desk)",
+      "detail": ""
+    },
+    {
+      "id": "s2",
+      "intent": "I need to type the member number into the member number field, which is the textbox e8.",
+      "action": "type",
+      "status": "ok",
+      "resolution": {
+        "ok": true,
+        "ref": "e8",
+        "strategy_index": 0,
+        "strategy_kind": "label",
+        "confidence": 0.9,
+        "candidates": 1,
+        "degraded": false,
+        "reason": "verified"
+      },
+      "value_sent": "****0005",
+      "extracted": null,
+      "duration_ms": 164,
+      "attempts": 1,
+      "expectation": null,
+      "detail": ""
+    },
+    {
+      "id": "s3",
+      "intent": "The member number is filled in and I need to click INQUIRE to look up member {{ inputs.member_number }}.",
+      "action": "click",
+      "status": "ok",
+      "resolution": {
+        "ok": true,
+        "ref": "e9",
+        "strategy_index": 0,
+        "strategy_kind": "role_name",
+        "confidence": 0.97,
+        "candidates": 1,
+        "degraded": false,
+        "reason": "verified"
+      },
+      "value_sent": null,
+      "extracted": null,
+      "duration_ms": 550,
+      "attempts": 1,
+      "expectation": "route_matches /^/desk$/ -> True (path=/desk)",
+      "detail": ""
+    },
+    {
+      "id": "s4",
+      "intent": "The inquiry is complete showing SHARE SAVINGS balance <savings_balance> (e35) and member name <member_name> (e13); I'll extract the savings balance first.",
+      "action": "extract",
+      "status": "ok",
+      "resolution": {
+        "ok": true,
+        "ref": "e35",
+        "strategy_index": 0,
+        "strategy_kind": "label",
+        "confidence": 0.9,
+        "candidates": 1,
+        "degraded": false,
+        "reason": "verified"
+      },
+      "value_sent": null,
+      "extracted": {
+        "amount": 3312.87,
+        "currency": "USD",
+        "raw": "$3,312.87"
+      },
+      "duration_ms": 0,
+      "attempts": 1,
+      "expectation": null,
+      "detail": ""
+    },
+    {
+      "id": "s5",
+      "intent": "Savings balance already extracted; now I need to extract the member name shown at e13 '<member_name>' before finishing.",
+      "action": "extract",
+      "status": "ok",
+      "resolution": {
+        "ok": true,
+        "ref": "e13",
+        "strategy_index": 0,
+        "strategy_kind": "label",
+        "confidence": 0.9,
+        "candidates": 1,
+        "degraded": false,
+        "reason": "verified"
+      },
+      "value_sent": null,
+      "extracted": "EUNICE P. FARRAR",
+      "duration_ms": 0,
+      "attempts": 1,
+      "expectation": null,
+      "detail": ""
+    }
+  ],
+  "recoveries": [
+    {
+      "at_step": "session",
+      "rule": "sign_on_coreserv",
+      "kind": "reauth",
+      "detail": "re-auth success",
+      "attempts": 1
+    }
+  ],
+  "failure": null,
+  "duration_ms": 8904,
+  "llm_calls": 0,
+  "llm_tokens": 0,
+  "degraded_resolutions": 0,
+  "drift_signals": [],
+  "evidence_dir": "/home/claude/pcx/evidence/replay-20260909T042016-0889",
+  "output_names": [
+    "savings_balance",
+    "member_name"
+  ]
+}

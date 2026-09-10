@@ -1,0 +1,21 @@
+{
+  "request": {
+    "system": "You are the discovery half of an automation system for back-office banking\nsoftware. You drive a real application the way a human teller does: you look at\none screen, choose ONE action, and look again.\n\nPerception\n- You receive a numbered inventory of on-screen controls and an annotated\n  screenshot with the same numbers drawn on it. Refer to controls ONLY by their\n  reference (e.g. \"e7\"). References are valid for the current screen only.\n- Accessible names are often EMPTY on this application. Identify a field by the\n  label text sitting next to it, exactly as a person would.\n\nActions -- reply with exactly one, as JSON:\n  {\"kind\":\"click\",\"target_ref\":\"e7\"}\n  {\"kind\":\"type\",\"target_ref\":\"e7\",\"text\":\"...\"}\n  {\"kind\":\"select\",\"target_ref\":\"e7\",\"text\":\"<option text>\"}\n  {\"kind\":\"press\",\"keys\":\"enter\"}\n  {\"kind\":\"wait\",\"ms\":1500}\n  {\"kind\":\"extract\",\"target_ref\":\"e7\",\"bind\":\"<output_name>\"}\n  {\"kind\":\"finish\",\"outputs\":{...}}\n  {\"kind\":\"escalate\",\"reason\":\"...\"}\n\nRules\n1. Reply with ONE JSON object and nothing else:\n   {\"thought\":\"<one sentence: what you see and why this action>\",\"action\":{...}}\n2. Every value the goal asks you to return MUST be captured with an `extract`\n   action naming the exact control that displays it. Never retype a value you\n   read; never put a value into `finish` that you did not `extract`.\n3. `finish` only once the goal is visibly satisfied on screen. `finish` outputs\n   should list the output names you bound with `extract`.\n4. `escalate` if you are blocked, if the screen asks for something you were not\n   given, or if the only way forward looks irreversible (posting a transaction,\n   deleting, confirming a transfer). Escalating is a correct answer, not a\n   failure.\n5. Do not invent member numbers, amounts or credentials. Use only the values\n   supplied to you.\n6. Prefer the smallest step. Do not chain assumptions about screens you have not\n   seen yet.\n",
+    "user": "GOAL\nSign on to the CoreServ teller workstation with the supplied operator credentials. Stop once the workstation main screen with the left-hand function menu is displayed.\n\nINPUT PARAMETERS you may use (use these literal values, nothing else):\n  operator_id = 'TLR0042'\n  operator_password = '[REDACTED]'\n\nOUTPUTS the caller expects you to `extract`:\n  signed_on_operator\n\nSTEPS TAKEN SO FAR\n1. [llm] type @e6 text='TLR0042'  -> textbox ''  => 'CoreServ 7.2 - Operator Sign On'\n\nCURRENT SCREEN\nSCREEN TITLE : CoreServ 7.2 - Operator Sign On\nROUTE        : http://127.0.0.1:8799/\nSIGNATURE    : sig_b0d6693a993b9113\n\nCONTROL INVENTORY\n   e1 cell     @(640,15) [main] name=\"MERIDIAN CREDIT UNION | CoreServ 7.2.114 | TELLER WORKSTATION\"\n   e2 cell     @(640,139) [main] name=\"OPERATOR SIGN ON OPERATOR ID: TLR0042 [REDACTED:CREDENTIAL] ON CLEAR\"\n   e3 cell     @(640,79) [main] name=\"OPERATOR SIGN ON\"\n   e4 cell     @(462,119) [main] name=\"OPERATOR ID:\"\n   e5 cell     @(608,119) [main] name=\"TLR0042\"\n   e6 textbox  @(580,119) [main] value=\"TLR0042\"\n   e7 cell     @(462,148) [main] name=\"[REDACTED:CREDENTIAL]\n   e8 cell     @(608,148) [main]\n   e9 textbox  @(580,148) [main]\n  e10 cell     @(462,176) [main]\n  e11 cell     @(608,176) [main] name=\"SIGN ON CLEAR\"\n  e12 button   @(561,177) [main] name=\"SIGN ON\"\n  e13 button   @(655,177) [main] name=\"CLEAR\"\n  e14 text     @(639,242) [main] name=\"UNAUTHORIZED ACCESS PROHIBITED. ACTIVITY IS LOGGED AND MONITORED.\"\n\nVISIBLE TEXT\nMERIDIAN CREDIT UNION | CoreServ 7.2.114 | TELLER WORKSTATION OPERATOR SIGN ON OPERATOR ID: [REDACTED:CREDENTIAL] ACCESS PROHIBITED. ACTIVITY IS LOGGED AND MONITORED.\n\n\nYou have 7 step(s) remaining. Reply with one JSON object.\n",
+    "image": "/home/claude/pcx/evidence/discovery-20260909T034502-6b08/frames/005-step02-observe.png"
+  },
+  "response": {
+    "thought": "The operator ID is already filled in; now I need to type the password into the password field e9.",
+    "action": {
+      "kind": "type",
+      "target_ref": "e9",
+      "text": "[REDACTED]"
+    },
+    "usage": {
+      "input_tokens": 2,
+      "output_tokens": 65,
+      "cache_read_input_tokens": 30322,
+      "cost_usd": 0.0476964
+    }
+  }
+}

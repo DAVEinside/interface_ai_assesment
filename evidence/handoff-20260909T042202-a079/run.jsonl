@@ -1,0 +1,29 @@
+{"seq": 1, "t": 0.527, "kind": "run_start", "mode": "replay", "capability": "read_member_savings_balance@v1", "digest": "sha256:8dbe5384cffbfe0f3c6e3798a9f71885", "execution_type": 2, "tenant": "default", "inputs": {"member_number": "****0001"}}
+{"seq": 2, "t": 1.168, "kind": "reauth", "capability": "sign_on_coreserv", "detail": "any_of[text_matches /CSV-440/ -> True; text_present 'OPERATOR SIGN ON' -> True; text_present 'OPERATOR ID' -> True]"}
+{"seq": 3, "t": 1.186, "kind": "run_start", "mode": "replay", "capability": "sign_on_coreserv@v1", "digest": "sha256:c03bc541043ad6cebb641c6f686c61fe", "execution_type": 3, "tenant": "default", "inputs": {"operator_id": "***0042", "operator_password": "[REDACTED]"}}
+{"seq": 4, "t": 1.752, "kind": "policy", "step": "s1", "allowed": true, "rule": "action", "detail": "type risk=safe", "requires_approval": false}
+{"seq": 5, "t": 1.9, "kind": "act", "step": "s1", "action": "type text='TLR0042'", "resolution": "e6 via label[0] p=0.90", "attempts": 1, "ms": 148}
+{"seq": 6, "t": 2.384, "kind": "policy", "step": "s2", "allowed": true, "rule": "action", "detail": "type risk=safe", "requires_approval": false}
+{"seq": 7, "t": 2.608, "kind": "act", "step": "s2", "action": "type text='[REDACTED]'", "resolution": "e9 via label[0] p=0.90", "attempts": 1, "ms": 224}
+{"seq": 8, "t": 3.163, "kind": "policy", "step": "s3", "allowed": true, "rule": "action", "detail": "click risk=reversible", "requires_approval": false}
+{"seq": 9, "t": 3.571, "kind": "act", "step": "s3", "action": "click", "resolution": "e12 via role_name[0] p=0.97", "attempts": 1, "ms": 408}
+{"seq": 10, "t": 4.131, "kind": "policy", "step": "s4", "allowed": true, "rule": "action", "detail": "extract risk=safe", "requires_approval": false}
+{"seq": 11, "t": 4.132, "kind": "act", "step": "s4", "action": "extract ->signed_on_operator", "resolution": "e6 via label[0] p=0.90", "attempts": 1, "ms": 0}
+{"seq": 12, "t": 4.678, "kind": "checkpoint", "id": "final", "passed": true, "detail": "route_matches /^/desk$/ -> True (path=/desk); element_present -> e6 via label[0] p=0.90"}
+{"seq": 13, "t": 4.678, "kind": "run_end", "status": "success", "outcome": "OK", "outputs": {"signed_on_operator": "R. OKONKWO"}, "llm_calls": 0, "degraded_resolutions": 0, "drift_signals": [], "duration_ms": 3493}
+{"seq": 14, "t": 5.364, "kind": "policy", "step": "s1", "allowed": true, "rule": "action", "detail": "click risk=safe", "requires_approval": false}
+{"seq": 15, "t": 5.717, "kind": "act", "step": "s1", "action": "click", "resolution": "e9 via role_name[0] p=0.97", "attempts": 1, "ms": 353}
+{"seq": 16, "t": 6.279, "kind": "policy", "step": "s2", "allowed": true, "rule": "action", "detail": "type risk=safe", "requires_approval": false}
+{"seq": 17, "t": 6.434, "kind": "act", "step": "s2", "action": "type text='10000001'", "resolution": "e8 via label[0] p=0.90", "attempts": 1, "ms": 155}
+{"seq": 18, "t": 6.997, "kind": "policy", "step": "s3", "allowed": true, "rule": "action", "detail": "click risk=safe", "requires_approval": false}
+{"seq": 19, "t": 7.406, "kind": "act", "step": "s3", "action": "click", "resolution": "e9 via role_name[0] p=0.97", "attempts": 1, "ms": 408}
+{"seq": 20, "t": 8.136, "kind": "run_end", "status": "failed", "outcome": "APPLICATION_ERROR", "failure": {"code": "APPLICATION_ERROR", "step_id": "s3", "step_intent": "The member number is filled in and I need to click INQUIRE to look up member {{ inputs.member_number }}.", "expected": "{\"route_matches\":\"^/desk$\"}", "observed": "any_of[text_matches /CSV-500/ -> True; text_present 'CORESERV SYSTEM ERROR' -> True]", "resolution": null, "route": "http://127.0.0.1:8799/desk", "screen_signature": "sig_335b4337dcb8ae5b", "frame": "handoff-20260909T042202-a079/frames/019-s3-apperror.png", "snapshot": null, "hint": "Application error page reached before the step could run."}}
+{"seq": 21, "t": 8.289, "kind": "escalation_raised", "request_id": "int_d281f81f10", "reason": "APPLICATION_ERROR: any_of[text_matches /CSV-500/ -> True; text_present 'CORESERV SYSTEM ERROR' -> True]"}
+{"seq": 22, "t": 8.312, "kind": "handoff_claimed", "actor": "human", "request_id": "int_d281f81f10", "operator": "j.reyes"}
+{"seq": 23, "t": 8.85, "kind": "human_action", "actor": "human", "action": "click", "detail": "click (94,67)"}
+{"seq": 24, "t": 9.346, "kind": "human_action", "actor": "human", "action": "click", "detail": "click (385,59)"}
+{"seq": 25, "t": 9.491, "kind": "human_action", "actor": "human", "action": "type", "detail": "type 8 chars"}
+{"seq": 26, "t": 10.054, "kind": "human_action", "actor": "human", "action": "click", "detail": "click (489,59)"}
+{"seq": 27, "t": 10.057, "kind": "handoff_released", "actor": "human", "request_id": "int_d281f81f10", "disposition": "resume", "note": "CoreServ threw CSV-500; re-ran the inquiry by hand, screen is good.", "actions": 4}
+{"seq": 28, "t": 10.058, "kind": "escalation_resolved", "disposition": "resume", "operator": "j.reyes", "note": "CoreServ threw CSV-500; re-ran the inquiry by hand, screen is good.", "human_actions": [{"at": 1788927731.0333202, "kind": "click", "detail": "click (94,67)"}, {"at": 1788927731.5297604, "kind": "click", "detail": "click (385,59)"}, {"at": 1788927731.6748443, "kind": "type", "detail": "type 8 chars"}, {"at": 1788927732.238052, "kind": "click", "detail": "click (489,59)"}], "waited_s": 1.8}
+{"seq": 29, "t": 10.392, "kind": "checkpoint_after_handoff", "passed": true, "detail": "route_matches /^/desk$/ -> True (path=/desk); element_present -> e35 via label[0] p=0.90; element_present -> e13 via label[0] p=0.90"}

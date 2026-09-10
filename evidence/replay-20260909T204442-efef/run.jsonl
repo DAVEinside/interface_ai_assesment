@@ -1,0 +1,21 @@
+{"seq": 1, "t": 1.186, "kind": "run_start", "mode": "replay", "capability": "post_transaction_guarded@v1", "digest": "sha256:7c8b2f0408dfd54ae5fd84df093929da", "execution_type": 1, "tenant": "default", "inputs": {"account": "*********0000", "amount": "250.00"}}
+{"seq": 2, "t": 1.77, "kind": "reauth", "capability": "sign_on_coreserv", "detail": "any_of[text_matches /CSV-440/ -> True; text_present 'OPERATOR SIGN ON' -> True; text_present 'OPERATOR ID' -> True]"}
+{"seq": 3, "t": 1.888, "kind": "run_start", "mode": "replay", "capability": "sign_on_coreserv@v1", "digest": "sha256:c03bc541043ad6cebb641c6f686c61fe", "execution_type": 3, "tenant": "default", "inputs": {"operator_id": "***0042", "operator_password": "[REDACTED]"}}
+{"seq": 4, "t": 3.084, "kind": "policy", "step": "s1", "allowed": true, "rule": "action", "detail": "type risk=safe", "requires_approval": false}
+{"seq": 5, "t": 3.28, "kind": "act", "step": "s1", "action": "type text='TLR0042'", "resolution": "e5 via label[0] p=0.90", "attempts": 1, "ms": 196}
+{"seq": 6, "t": 3.808, "kind": "policy", "step": "s2", "allowed": true, "rule": "action", "detail": "type risk=safe", "requires_approval": false}
+{"seq": 7, "t": 4.115, "kind": "act", "step": "s2", "action": "type text='[REDACTED]'", "resolution": "e8 via label[0] p=0.90", "attempts": 1, "ms": 307}
+{"seq": 8, "t": 4.672, "kind": "policy", "step": "s3", "allowed": true, "rule": "action", "detail": "click risk=reversible", "requires_approval": false}
+{"seq": 9, "t": 5.196, "kind": "act", "step": "s3", "action": "click", "resolution": "e11 via role_name[0] p=0.97", "attempts": 1, "ms": 523}
+{"seq": 10, "t": 5.739, "kind": "policy", "step": "s4", "allowed": true, "rule": "action", "detail": "extract risk=safe", "requires_approval": false}
+{"seq": 11, "t": 5.74, "kind": "act", "step": "s4", "action": "extract ->signed_on_operator", "resolution": "e6 via label[0] p=0.90", "attempts": 1, "ms": 1}
+{"seq": 12, "t": 6.304, "kind": "checkpoint", "id": "final", "passed": true, "detail": "route_matches /^/desk$/ -> True (path=/desk); element_present -> e6 via label[0] p=0.90"}
+{"seq": 13, "t": 6.305, "kind": "run_end", "status": "success", "outcome": "OK", "outputs": {"signed_on_operator": "R. OKONKWO"}, "llm_calls": 0, "degraded_resolutions": 0, "drift_signals": [], "duration_ms": 4418}
+{"seq": 14, "t": 6.985, "kind": "policy", "step": "s1", "allowed": true, "rule": "action", "detail": "click risk=safe", "requires_approval": false}
+{"seq": 15, "t": 7.437, "kind": "act", "step": "s1", "action": "click", "resolution": "e14 via role_name[0] p=0.97", "attempts": 1, "ms": 453}
+{"seq": 16, "t": 8.01, "kind": "policy", "step": "s2", "allowed": true, "rule": "action", "detail": "type risk=safe", "requires_approval": false}
+{"seq": 17, "t": 8.295, "kind": "act", "step": "s2", "action": "type text='10000001-0000'", "resolution": "e7 via label[0] p=0.90", "attempts": 1, "ms": 286}
+{"seq": 18, "t": 8.955, "kind": "policy", "step": "s3", "allowed": true, "rule": "action", "detail": "type risk=safe", "requires_approval": false}
+{"seq": 19, "t": 9.132, "kind": "act", "step": "s3", "action": "type text='250.00'", "resolution": "e14 via label[0] p=0.90", "attempts": 1, "ms": 177}
+{"seq": 20, "t": 9.692, "kind": "policy", "step": "s4", "allowed": false, "rule": "risk.irreversible", "detail": "step 's4' is classified irreversible ('POST TRANSACTION button') and requires human approval", "requires_approval": true}
+{"seq": 21, "t": 9.693, "kind": "run_end", "status": "escalated", "outcome": "APPROVAL_REQUIRED", "failure": {"code": "APPROVAL_REQUIRED", "step_id": "s4", "step_intent": "Commit the posting to the core ledger", "expected": "{\"text_present\":\"POSTING COMMITTED\"}", "observed": "step 's4' is classified irreversible ('POST TRANSACTION button') and requires human approval", "resolution": null, "route": "http://127.0.0.1:8799/desk", "screen_signature": "sig_af4ad1a2dbdaa27d", "frame": null, "snapshot": null, "hint": "This step is irreversible and no operator was available to approve it. Re-invoke with an operator console attached, or pass an explicit pre-approval. The run stopped before the step, not during it."}}

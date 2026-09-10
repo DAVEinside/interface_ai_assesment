@@ -1,0 +1,91 @@
+{
+  "run_id": "replay-20260909T204357-916d",
+  "mode": "replay",
+  "started_at": 1789001038.7338834,
+  "duration_s": 11.76,
+  "events": 20,
+  "capability": "read_member_savings_balance",
+  "version": 1,
+  "digest": "sha256:8dbe5384cffbfe0f3c6e3798a9f71885",
+  "tenant": "default",
+  "execution_type": 3,
+  "status": "failed",
+  "outcome": "APPLICATION_ERROR",
+  "outcome_description": "",
+  "remediation": "",
+  "steps": [
+    {
+      "id": "s1",
+      "intent": "I need to navigate to the MEMBER INQUIRY function to look up member {{ inputs.member_number }}, so I'll click that link.",
+      "action": "click",
+      "status": "ok",
+      "resolution": {
+        "ok": true,
+        "ref": "e9",
+        "strategy_index": 0,
+        "strategy_kind": "role_name",
+        "confidence": 0.97,
+        "candidates": 1,
+        "degraded": false,
+        "reason": "verified"
+      },
+      "value_sent": null,
+      "extracted": null,
+      "duration_ms": 485,
+      "attempts": 1,
+      "expectation": "route_matches /^/desk$/ -> True (path=/desk)",
+      "detail": ""
+    },
+    {
+      "id": "s2",
+      "intent": "I need to type the member number into the member number field, which is the textbox e8.",
+      "action": "type",
+      "status": "ok",
+      "resolution": {
+        "ok": true,
+        "ref": "e8",
+        "strategy_index": 0,
+        "strategy_kind": "label",
+        "confidence": 0.9,
+        "candidates": 1,
+        "degraded": false,
+        "reason": "verified"
+      },
+      "value_sent": "****0001",
+      "extracted": null,
+      "duration_ms": 203,
+      "attempts": 1,
+      "expectation": null,
+      "detail": ""
+    }
+  ],
+  "recoveries": [
+    {
+      "at_step": "session",
+      "rule": "sign_on_coreserv",
+      "kind": "reauth",
+      "detail": "re-auth success",
+      "attempts": 1
+    }
+  ],
+  "failure": {
+    "code": "APPLICATION_ERROR",
+    "step_id": "s3",
+    "step_intent": "The member number is filled in and I need to click INQUIRE to look up member {{ inputs.member_number }}.",
+    "expected": "{\"route_matches\":\"^/desk$\"}",
+    "observed": "any_of[text_matches /CSV-500/ -> True; text_present 'CORESERV SYSTEM ERROR' -> True]",
+    "resolution": null,
+    "route": "http://127.0.0.1:8799/desk",
+    "screen_signature": "sig_335b4337dcb8ae5b",
+    "frame": "replay-20260909T204357-916d\\frames\\019-s3-apperror.png",
+    "snapshot": "replay-20260909T204357-916d\\snapshots\\019-application_error.html",
+    "hint": "Application error page reached before the step could run. Do not retry blindly; the state of any earlier step is unknown."
+  },
+  "duration_ms": 9733,
+  "llm_calls": 0,
+  "llm_tokens": 0,
+  "degraded_resolutions": 0,
+  "drift_signals": [],
+  "evidence_dir": "D:\\interface_ai\\pcx\\evidence\\replay-20260909T204357-916d",
+  "output_names": []
+}

@@ -1,0 +1,40 @@
+{"seq": 1, "t": 1.468, "kind": "run_start", "mode": "replay", "capability": "read_member_savings_balance@v1", "digest": "sha256:8dbe5384cffbfe0f3c6e3798a9f71885", "execution_type": 3, "tenant": "default", "inputs": {"member_number": "****0001"}}
+{"seq": 2, "t": 2.11, "kind": "reauth", "capability": "sign_on_coreserv", "detail": "any_of[text_matches /CSV-440/ -> True; text_present 'OPERATOR SIGN ON' -> True; text_present 'OPERATOR ID' -> True]"}
+{"seq": 3, "t": 2.185, "kind": "run_start", "mode": "replay", "capability": "sign_on_coreserv@v1", "digest": "sha256:c03bc541043ad6cebb641c6f686c61fe", "execution_type": 3, "tenant": "default", "inputs": {"operator_id": "***0042", "operator_password": "[REDACTED]"}}
+{"seq": 4, "t": 2.826, "kind": "policy", "step": "s1", "allowed": true, "rule": "action", "detail": "type risk=safe", "requires_approval": false}
+{"seq": 5, "t": 3.018, "kind": "act", "step": "s1", "action": "type text='TLR0042'", "resolution": "e5 via label[0] p=0.90", "attempts": 1, "ms": 192}
+{"seq": 6, "t": 3.543, "kind": "policy", "step": "s2", "allowed": true, "rule": "action", "detail": "type risk=safe", "requires_approval": false}
+{"seq": 7, "t": 3.841, "kind": "act", "step": "s2", "action": "type text='[REDACTED]'", "resolution": "e8 via label[0] p=0.90", "attempts": 1, "ms": 298}
+{"seq": 8, "t": 5.488, "kind": "policy", "step": "s3", "allowed": true, "rule": "action", "detail": "click risk=reversible", "requires_approval": false}
+{"seq": 9, "t": 5.896, "kind": "act", "step": "s3", "action": "click", "resolution": "e11 via role_name[0] p=0.97", "attempts": 1, "ms": 408}
+{"seq": 10, "t": 6.442, "kind": "policy", "step": "s4", "allowed": true, "rule": "action", "detail": "extract risk=safe", "requires_approval": false}
+{"seq": 11, "t": 6.443, "kind": "act", "step": "s4", "action": "extract ->signed_on_operator", "resolution": "e6 via label[0] p=0.90", "attempts": 1, "ms": 1}
+{"seq": 12, "t": 6.965, "kind": "checkpoint", "id": "final", "passed": true, "detail": "route_matches /^/desk$/ -> True (path=/desk); element_present -> e6 via label[0] p=0.90"}
+{"seq": 13, "t": 6.965, "kind": "run_end", "status": "success", "outcome": "OK", "outputs": {"signed_on_operator": "R. OKONKWO"}, "llm_calls": 0, "degraded_resolutions": 0, "drift_signals": [], "duration_ms": 4781}
+{"seq": 14, "t": 7.628, "kind": "policy", "step": "s1", "allowed": true, "rule": "action", "detail": "click risk=safe", "requires_approval": false}
+{"seq": 15, "t": 8.094, "kind": "act", "step": "s1", "action": "click", "resolution": "e9 via role_name[0] p=0.97", "attempts": 1, "ms": 466}
+{"seq": 16, "t": 8.83, "kind": "reauth", "capability": "sign_on_coreserv", "detail": "any_of[text_matches /CSV-440/ -> True; text_present 'OPERATOR SIGN ON' -> True; text_present 'OPERATOR ID' -> True]"}
+{"seq": 17, "t": 8.884, "kind": "run_start", "mode": "replay", "capability": "sign_on_coreserv@v1", "digest": "sha256:c03bc541043ad6cebb641c6f686c61fe", "execution_type": 3, "tenant": "default", "inputs": {"operator_id": "***0042", "operator_password": "[REDACTED]"}}
+{"seq": 18, "t": 9.478, "kind": "policy", "step": "s1", "allowed": true, "rule": "action", "detail": "type risk=safe", "requires_approval": false}
+{"seq": 19, "t": 9.667, "kind": "act", "step": "s1", "action": "type text='TLR0042'", "resolution": "e5 via label[0] p=0.90", "attempts": 1, "ms": 189}
+{"seq": 20, "t": 10.19, "kind": "policy", "step": "s2", "allowed": true, "rule": "action", "detail": "type risk=safe", "requires_approval": false}
+{"seq": 21, "t": 10.496, "kind": "act", "step": "s2", "action": "type text='[REDACTED]'", "resolution": "e8 via label[0] p=0.90", "attempts": 1, "ms": 306}
+{"seq": 22, "t": 11.071, "kind": "policy", "step": "s3", "allowed": true, "rule": "action", "detail": "click risk=reversible", "requires_approval": false}
+{"seq": 23, "t": 11.45, "kind": "act", "step": "s3", "action": "click", "resolution": "e11 via role_name[0] p=0.97", "attempts": 1, "ms": 379}
+{"seq": 24, "t": 12.088, "kind": "policy", "step": "s4", "allowed": true, "rule": "action", "detail": "extract risk=safe", "requires_approval": false}
+{"seq": 25, "t": 12.089, "kind": "act", "step": "s4", "action": "extract ->signed_on_operator", "resolution": "e6 via label[0] p=0.90", "attempts": 1, "ms": 1}
+{"seq": 26, "t": 12.586, "kind": "checkpoint", "id": "final", "passed": true, "detail": "route_matches /^/desk$/ -> True (path=/desk); element_present -> e6 via label[0] p=0.90"}
+{"seq": 27, "t": 12.587, "kind": "run_end", "status": "success", "outcome": "OK", "outputs": {"signed_on_operator": "R. OKONKWO"}, "llm_calls": 0, "degraded_resolutions": 0, "drift_signals": [], "duration_ms": 3704}
+{"seq": 28, "t": 12.77, "kind": "reauth_restart", "detail": "read-only flow restarted from step 1"}
+{"seq": 29, "t": 13.388, "kind": "policy", "step": "s1", "allowed": true, "rule": "action", "detail": "click risk=safe", "requires_approval": false}
+{"seq": 30, "t": 13.845, "kind": "act", "step": "s1", "action": "click", "resolution": "e9 via role_name[0] p=0.97", "attempts": 1, "ms": 456}
+{"seq": 31, "t": 14.399, "kind": "policy", "step": "s2", "allowed": true, "rule": "action", "detail": "type risk=safe", "requires_approval": false}
+{"seq": 32, "t": 14.574, "kind": "act", "step": "s2", "action": "type text='10000001'", "resolution": "e8 via label[0] p=0.90", "attempts": 1, "ms": 174}
+{"seq": 33, "t": 15.1, "kind": "policy", "step": "s3", "allowed": true, "rule": "action", "detail": "click risk=safe", "requires_approval": false}
+{"seq": 34, "t": 15.953, "kind": "act", "step": "s3", "action": "click", "resolution": "e9 via role_name[0] p=0.97", "attempts": 1, "ms": 853}
+{"seq": 35, "t": 16.728, "kind": "policy", "step": "s4", "allowed": true, "rule": "action", "detail": "extract risk=safe", "requires_approval": false}
+{"seq": 36, "t": 16.729, "kind": "act", "step": "s4", "action": "extract ->savings_balance", "resolution": "e35 via label[0] p=0.90", "attempts": 1, "ms": 1}
+{"seq": 37, "t": 17.415, "kind": "policy", "step": "s5", "allowed": true, "rule": "action", "detail": "extract risk=safe", "requires_approval": false}
+{"seq": 38, "t": 17.417, "kind": "act", "step": "s5", "action": "extract ->member_name", "resolution": "e13 via label[0] p=0.90", "attempts": 1, "ms": 2}
+{"seq": 39, "t": 18.113, "kind": "checkpoint", "id": "final", "passed": true, "detail": "route_matches /^/desk$/ -> True (path=/desk); element_present -> e35 via label[0] p=0.90; element_present -> e13 via label[0] p=0.90"}
+{"seq": 40, "t": 18.114, "kind": "run_end", "status": "success", "outcome": "OK", "outputs": {"savings_balance": {"amount": 18425.63, "currency": "USD", "raw": "$18,425.63"}, "member_name": "[REDACTED:PII len=15]"}, "llm_calls": 0, "degraded_resolutions": 0, "drift_signals": [], "duration_ms": 16647}

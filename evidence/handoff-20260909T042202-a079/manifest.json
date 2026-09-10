@@ -1,0 +1,113 @@
+{
+  "run_id": "handoff-20260909T042202-a079",
+  "mode": "handoff",
+  "started_at": 1788927722.7108808,
+  "duration_s": 10.39,
+  "events": 29,
+  "capability": "read_member_savings_balance",
+  "version": 1,
+  "digest": "sha256:8dbe5384cffbfe0f3c6e3798a9f71885",
+  "tenant": "default",
+  "execution_type": 2,
+  "status": "success",
+  "outcome": "OK_AFTER_HANDOFF",
+  "outcome_description": "Completed by operator j.reyes on the live session.",
+  "remediation": "",
+  "steps": [
+    {
+      "id": "s1",
+      "intent": "I need to navigate to the MEMBER INQUIRY function to look up member {{ inputs.member_number }}, so I'll click that link.",
+      "action": "click",
+      "status": "ok",
+      "resolution": {
+        "ok": true,
+        "ref": "e9",
+        "strategy_index": 0,
+        "strategy_kind": "role_name",
+        "confidence": 0.97,
+        "candidates": 1,
+        "degraded": false,
+        "reason": "verified"
+      },
+      "value_sent": null,
+      "extracted": null,
+      "duration_ms": 353,
+      "attempts": 1,
+      "expectation": "route_matches /^/desk$/ -> True (path=/desk)",
+      "detail": ""
+    },
+    {
+      "id": "s2",
+      "intent": "I need to type the member number into the member number field, which is the textbox e8.",
+      "action": "type",
+      "status": "ok",
+      "resolution": {
+        "ok": true,
+        "ref": "e8",
+        "strategy_index": 0,
+        "strategy_kind": "label",
+        "confidence": 0.9,
+        "candidates": 1,
+        "degraded": false,
+        "reason": "verified"
+      },
+      "value_sent": "****0001",
+      "extracted": null,
+      "duration_ms": 155,
+      "attempts": 1,
+      "expectation": null,
+      "detail": ""
+    },
+    {
+      "id": "s3",
+      "intent": "The member number is filled in and I need to click INQUIRE to look up member {{ inputs.member_number }}.",
+      "action": "click",
+      "status": "ok",
+      "resolution": {
+        "ok": true,
+        "ref": "e9",
+        "strategy_index": 0,
+        "strategy_kind": "role_name",
+        "confidence": 0.97,
+        "candidates": 1,
+        "degraded": false,
+        "reason": "verified"
+      },
+      "value_sent": null,
+      "extracted": null,
+      "duration_ms": 408,
+      "attempts": 1,
+      "expectation": null,
+      "detail": ""
+    }
+  ],
+  "recoveries": [
+    {
+      "at_step": "session",
+      "rule": "sign_on_coreserv",
+      "kind": "reauth",
+      "detail": "re-auth success",
+      "attempts": 1
+    }
+  ],
+  "failure": {
+    "code": "APPLICATION_ERROR",
+    "step_id": "s3",
+    "step_intent": "The member number is filled in and I need to click INQUIRE to look up member {{ inputs.member_number }}.",
+    "expected": "{\"route_matches\":\"^/desk$\"}",
+    "observed": "any_of[text_matches /CSV-500/ -> True; text_present 'CORESERV SYSTEM ERROR' -> True]",
+    "resolution": null,
+    "route": "http://127.0.0.1:8799/desk",
+    "screen_signature": "sig_335b4337dcb8ae5b",
+    "frame": "handoff-20260909T042202-a079/frames/019-s3-apperror.png",
+    "snapshot": null,
+    "hint": "handed to operator j.reyes: resume -- CoreServ threw CSV-500; re-ran the inquiry by hand, screen is good."
+  },
+  "duration_ms": 7608,
+  "llm_calls": 0,
+  "llm_tokens": 0,
+  "degraded_resolutions": 0,
+  "drift_signals": [],
+  "evidence_dir": "/home/claude/pcx/evidence/handoff-20260909T042202-a079",
+  "output_names": []
+}

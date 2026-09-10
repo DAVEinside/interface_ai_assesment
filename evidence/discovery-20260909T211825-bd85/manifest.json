@@ -1,0 +1,22 @@
+{
+  "run_id": "discovery-20260909T211825-bd85",
+  "mode": "discovery",
+  "started_at": 1789003105.3365417,
+  "duration_s": 59.22,
+  "events": 37,
+  "capability_id": "member_branch_lookup",
+  "status": "succeeded",
+  "stop_reason": "model reported the goal satisfied",
+  "steps": 6,
+  "model": "claude-sonnet-4-5-20250929",
+  "usage": {
+    "input_tokens": 17687,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 591
+  },
+  "outputs_bound": [
+    "member_name",
+    "branch"
+  ]
+}

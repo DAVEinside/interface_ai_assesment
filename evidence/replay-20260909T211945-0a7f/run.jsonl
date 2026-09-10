@@ -1,0 +1,25 @@
+{"seq": 1, "t": 2.408, "kind": "run_start", "mode": "replay", "capability": "member_branch_lookup@v1", "digest": "sha256:91dc669099d1a78356efee5e0b95427a", "execution_type": 3, "tenant": "default", "inputs": {"member_number": "****0001"}}
+{"seq": 2, "t": 3.958, "kind": "reauth", "capability": "sign_on_coreserv", "detail": "any_of[text_matches /CSV-440/ -> True; text_present 'OPERATOR SIGN ON' -> True; text_present 'OPERATOR ID' -> True]"}
+{"seq": 3, "t": 4.051, "kind": "run_start", "mode": "replay", "capability": "sign_on_coreserv@v1", "digest": "sha256:c03bc541043ad6cebb641c6f686c61fe", "execution_type": 3, "tenant": "default", "inputs": {"operator_id": "***0042", "operator_password": "[REDACTED]"}}
+{"seq": 4, "t": 4.744, "kind": "policy", "step": "s1", "allowed": true, "rule": "action", "detail": "type risk=safe", "requires_approval": false}
+{"seq": 5, "t": 4.921, "kind": "act", "step": "s1", "action": "type text='TLR0042'", "resolution": "e5 via label[0] p=0.90", "attempts": 1, "ms": 178}
+{"seq": 6, "t": 5.576, "kind": "policy", "step": "s2", "allowed": true, "rule": "action", "detail": "type risk=safe", "requires_approval": false}
+{"seq": 7, "t": 5.92, "kind": "act", "step": "s2", "action": "type text='[REDACTED]'", "resolution": "e8 via label[0] p=0.90", "attempts": 1, "ms": 344}
+{"seq": 8, "t": 6.625, "kind": "policy", "step": "s3", "allowed": true, "rule": "action", "detail": "click risk=reversible", "requires_approval": false}
+{"seq": 9, "t": 7.235, "kind": "act", "step": "s3", "action": "click", "resolution": "e11 via role_name[0] p=0.97", "attempts": 1, "ms": 610}
+{"seq": 10, "t": 7.858, "kind": "policy", "step": "s4", "allowed": true, "rule": "action", "detail": "extract risk=safe", "requires_approval": false}
+{"seq": 11, "t": 7.859, "kind": "act", "step": "s4", "action": "extract ->signed_on_operator", "resolution": "e6 via label[0] p=0.90", "attempts": 1, "ms": 1}
+{"seq": 12, "t": 8.443, "kind": "checkpoint", "id": "final", "passed": true, "detail": "route_matches /^/desk$/ -> True (path=/desk); element_present -> e6 via label[0] p=0.90"}
+{"seq": 13, "t": 8.444, "kind": "run_end", "status": "success", "outcome": "OK", "outputs": {"signed_on_operator": "R. OKONKWO"}, "llm_calls": 0, "degraded_resolutions": 0, "drift_signals": [], "duration_ms": 4396}
+{"seq": 14, "t": 9.139, "kind": "policy", "step": "s1", "allowed": true, "rule": "action", "detail": "click risk=safe", "requires_approval": false}
+{"seq": 15, "t": 9.602, "kind": "act", "step": "s1", "action": "click", "resolution": "e9 via role_name[0] p=0.97", "attempts": 1, "ms": 464}
+{"seq": 16, "t": 10.199, "kind": "policy", "step": "s2", "allowed": true, "rule": "action", "detail": "type risk=safe", "requires_approval": false}
+{"seq": 17, "t": 10.401, "kind": "act", "step": "s2", "action": "type text='10000001'", "resolution": "e8 via label[0] p=0.90", "attempts": 1, "ms": 202}
+{"seq": 18, "t": 11.019, "kind": "policy", "step": "s3", "allowed": true, "rule": "action", "detail": "click risk=safe", "requires_approval": false}
+{"seq": 19, "t": 11.603, "kind": "act", "step": "s3", "action": "click", "resolution": "e9 via role_name[0] p=0.97", "attempts": 1, "ms": 584}
+{"seq": 20, "t": 12.546, "kind": "policy", "step": "s4", "allowed": true, "rule": "action", "detail": "extract risk=safe", "requires_approval": false}
+{"seq": 21, "t": 12.548, "kind": "act", "step": "s4", "action": "extract ->member_name", "resolution": "e13 via label[0] p=0.90", "attempts": 1, "ms": 3}
+{"seq": 22, "t": 13.329, "kind": "policy", "step": "s5", "allowed": true, "rule": "action", "detail": "extract risk=safe", "requires_approval": false}
+{"seq": 23, "t": 13.33, "kind": "act", "step": "s5", "action": "extract ->branch", "resolution": "e9 via label[0] p=0.90", "attempts": 1, "ms": 3}
+{"seq": 24, "t": 14.101, "kind": "checkpoint", "id": "final", "passed": true, "detail": "route_matches /^/desk$/ -> True (path=/desk); element_present -> e13 via label[0] p=0.90; element_present -> e9 via label[0] p=0.90"}
+{"seq": 25, "t": 14.101, "kind": "run_end", "status": "success", "outcome": "OK", "outputs": {"member_name": "[REDACTED:PII len=15]", "branch": "003 - RIVERSIDE"}, "llm_calls": 0, "degraded_resolutions": 0, "drift_signals": [], "duration_ms": 11699}

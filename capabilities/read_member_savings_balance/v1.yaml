@@ -1,0 +1,588 @@
+schema_version: pcx.capability/1.0
+id: read_member_savings_balance
+version: 1
+title: Read Member Savings Balance
+description: Look up member {{ inputs.member_number }} in the CoreServ member inquiry screen and read
+  back their current SHARE SAVINGS balance and their member name.
+created_at: '2026-09-09T04:10:38.573127+00:00'
+created_by_run: discovery-20260909T034714-4663
+discovered_with_model: sonnet
+author: llm_discovery
+surface:
+  kind: web
+  adapter: pcx.surfaces.web:WebSurface
+  app:
+    vendor: Meridian Data Systems
+    product: CoreServ Teller Workstation
+    version: '7.2'
+  entrypoint: '{{ tenant.base_url }}/desk'
+  viewport:
+  - 1280
+  - 800
+contract:
+  summary: Look up member {{ inputs.member_number }} in the CoreServ member inquiry screen and read back
+    their current SHARE SAVINGS balance and their member name.
+  inputs:
+  - name: member_number
+    type: string
+    description: Member Number (8 digits).
+    required: true
+    pattern: \d{8}
+    sensitivity: pii_reference
+  outputs:
+  - name: savings_balance
+    type: money
+    description: Savings Balance.
+    required: true
+    sensitivity: internal
+  - name: member_name
+    type: string
+    description: Member Name.
+    required: true
+    sensitivity: pii
+  outcomes:
+  - code: OK
+    kind: success
+    description: The flow completed and every declared output was captured.
+    terminal: true
+    retryable: false
+    remediation: ''
+  - code: MEMBER_NOT_FOUND
+    kind: business
+    description: 'The member number is well-formed but no such record exists on the member file. A legitimate
+      answer to a lookup, not an error.
+
+      '
+    detect:
+      text_matches: MBR-404
+    terminal: true
+    retryable: false
+    remediation: Confirm the member number with the caller; try a name search instead.
+  - code: VALIDATION_ERROR
+    kind: business
+    description: 'The application rejected the supplied input before doing any work (wrong length, non-numeric,
+      amount below product minimum).
+
+      '
+    detect:
+      text_matches: MBR-00[0-9]|AMT-[0-9]{3}
+    terminal: true
+    retryable: false
+    remediation: Correct the input and re-invoke. Retrying unchanged will not help.
+  - code: PERMISSION_DENIED
+    kind: denied
+    description: 'The record carries an advisory hold, or the signed-on operator''s role is not authorized
+      for this function. Distinct from NOT_FOUND: the record exists and the caller may not see it.
+
+      '
+    detect:
+      text_matches: SEC-40[0-9]|PERMISSION DENIED
+    terminal: true
+    retryable: false
+    remediation: Route to a supervisor or to Compliance; do not retry with the same operator.
+  side_effect: read_only
+  idempotent: true
+  typical_duration_ms: 35820
+steps:
+- id: s1
+  intent: I need to navigate to the MEMBER INQUIRY function to look up member {{ inputs.member_number
+    }}, so I'll click that link.
+  action: click
+  target:
+    description: link 'MEMBER INQUIRY'
+    strategies:
+    - kind: role_name
+      role: link
+      name: MEMBER INQUIRY
+      note: Accessible name -- the most portable identity available.
+    - kind: label
+      role: link
+      anchor_text: FUNCTIONS
+      direction: below
+      max_distance: 420.0
+      region: navframe
+      note: The control immediately below of the label 'FUNCTIONS'. This product does not associate labels
+        with inputs, so adjacency is the only semantic link available -- and it is the same link a human
+        uses.
+    - kind: text
+      role: link
+      text: MEMBER INQUIRY
+      note: Visible label text.
+    - kind: ordinal
+      role: link
+      region: navframe
+      index: 0
+      note: Positional fallback. If this is the strategy that fires, the screen has changed and the capability
+        should be reviewed.
+    verify:
+      role: link
+      name_pattern: MEMBER\ INQUIRY
+      enabled: true
+      min_confidence: 0.45
+    on_ambiguity: fail
+    recorded:
+      role: link
+      name: MEMBER INQUIRY
+      region: navframe
+      rect:
+        x: 3.0
+        y: 60.0
+        w: 114.609375
+        h: 15.0
+  parse: raw
+  expect:
+    route_matches: ^/desk$
+  expect_navigation: true
+  signature_hint: sig_2abe72c1f62fc5f1
+  risk: safe
+  optional: false
+  retry:
+    attempts: 2
+    backoff_ms: 750
+    settle_ms: 300
+  timeout_ms: 15000
+- id: s2
+  intent: I need to type the member number into the member number field, which is the textbox e8.
+  action: type
+  target:
+    description: unlabelled textbox
+    strategies:
+    - kind: label
+      role: textbox
+      anchor_text: 'MEMBER NUMBER:'
+      direction: right
+      max_distance: 420.0
+      region: workframe
+      note: The control immediately right of the label 'MEMBER NUMBER:'. This product does not associate
+        labels with inputs, so adjacency is the only semantic link available -- and it is the same link
+        a human uses.
+    - kind: label
+      role: textbox
+      anchor_text: MEMBER INQUIRY
+      direction: below
+      max_distance: 420.0
+      region: workframe
+      note: The control immediately below of the label 'MEMBER INQUIRY'. This product does not associate
+        labels with inputs, so adjacency is the only semantic link available -- and it is the same link
+        a human uses.
+    - kind: ordinal
+      role: textbox
+      region: workframe
+      index: 0
+      note: Positional fallback. If this is the strategy that fires, the screen has changed and the capability
+        should be reviewed.
+    verify:
+      role: textbox
+      editable: true
+      enabled: true
+      min_confidence: 0.45
+    on_ambiguity: fail
+    recorded:
+      role: textbox
+      name: ''
+      region: workframe
+      rect:
+        x: 333.625
+        y: 52.0
+        w: 104.0
+        h: 15.0
+  value: '{{ inputs.member_number }}'
+  parse: raw
+  expect_navigation: false
+  signature_hint: sig_2abe72c1f62fc5f1
+  risk: safe
+  optional: false
+  retry:
+    attempts: 2
+    backoff_ms: 750
+    settle_ms: 300
+  timeout_ms: 15000
+- id: s3
+  intent: The member number is filled in and I need to click INQUIRE to look up member {{ inputs.member_number
+    }}.
+  action: click
+  target:
+    description: button 'INQUIRE'
+    strategies:
+    - kind: role_name
+      role: button
+      name: INQUIRE
+      note: Accessible name -- the most portable identity available.
+    - kind: label
+      role: button
+      anchor_text: 'MEMBER NUMBER:'
+      direction: right
+      max_distance: 420.0
+      region: workframe
+      note: The control immediately right of the label 'MEMBER NUMBER:'. This product does not associate
+        labels with inputs, so adjacency is the only semantic link available -- and it is the same link
+        a human uses.
+    - kind: label
+      role: button
+      anchor_text: MEMBER INQUIRY
+      direction: below
+      max_distance: 420.0
+      region: workframe
+      note: The control immediately below of the label 'MEMBER INQUIRY'. This product does not associate
+        labels with inputs, so adjacency is the only semantic link available -- and it is the same link
+        a human uses.
+    - kind: text
+      role: button
+      text: INQUIRE
+      note: Visible label text.
+    - kind: ordinal
+      role: button
+      region: workframe
+      index: 0
+      note: Positional fallback. If this is the strategy that fires, the screen has changed and the capability
+        should be reviewed.
+    verify:
+      role: button
+      name_pattern: INQUIRE
+      enabled: true
+      min_confidence: 0.45
+    on_ambiguity: fail
+    recorded:
+      role: button
+      name: INQUIRE
+      region: workframe
+      rect:
+        x: 457.625
+        y: 53.5
+        w: 64.0
+        h: 12.0
+  parse: raw
+  expect:
+    route_matches: ^/desk$
+  expect_navigation: true
+  signature_hint: sig_c68985f8331cb3b6
+  risk: safe
+  optional: false
+  retry:
+    attempts: 2
+    backoff_ms: 750
+    settle_ms: 300
+  timeout_ms: 15000
+- id: s4
+  intent: The inquiry is complete showing SHARE SAVINGS balance <savings_balance> (e35) and member name
+    <member_name> (e13); I'll extract the savings balance first.
+  action: extract
+  target:
+    description: cell located by label from 'SHARE SAVINGS'
+    strategies:
+    - kind: label
+      role: cell
+      anchor_text: SHARE SAVINGS
+      direction: right
+      max_distance: 420.0
+      region: workframe
+      note: The control immediately right of the label 'SHARE SAVINGS'. This product does not associate
+        labels with inputs, so adjacency is the only semantic link available -- and it is the same link
+        a human uses.
+    - kind: label
+      role: cell
+      anchor_text: CURRENT BALANCE
+      direction: below
+      max_distance: 420.0
+      region: workframe
+      note: The control immediately below of the label 'CURRENT BALANCE'. This product does not associate
+        labels with inputs, so adjacency is the only semantic link available -- and it is the same link
+        a human uses.
+    - kind: row_cell
+      role: cell
+      anchor_text: SHARE SAVINGS
+      rank: 0
+      column_header: CURRENT BALANCE
+      region: workframe
+      note: Read the value at the intersection of the row identified by 'SHARE SAVINGS' and the 'CURRENT
+        BALANCE' column.
+    - kind: row_cell
+      role: cell
+      text_pattern: ^-?\(?\$?[0-9][0-9,]*\.[0-9]{2}\)?$
+      anchor_text: SHARE SAVINGS
+      rank: 0
+      region: workframe
+      note: Same row, first cell matching the expected value shape.
+    - kind: ordinal
+      role: cell
+      region: workframe
+      index: 22
+      note: Positional fallback. If this is the strategy that fires, the screen has changed and the capability
+        should be reviewed.
+    verify:
+      role: cell
+      text_pattern: ^-?\(?\$?[0-9][0-9,]*\.[0-9]{2}\)?$
+      enabled: true
+      min_confidence: 0.45
+    on_ambiguity: fail
+    recorded:
+      role: cell
+      region: workframe
+      rect:
+        x: 411.59375
+        y: 160.0
+        w: 100.5625
+        h: 15.0
+  bind: savings_balance
+  parse: money
+  expect_navigation: false
+  signature_hint: sig_c68985f8331cb3b6
+  risk: safe
+  optional: false
+  retry:
+    attempts: 2
+    backoff_ms: 750
+    settle_ms: 300
+  timeout_ms: 15000
+- id: s5
+  intent: Savings balance already extracted; now I need to extract the member name shown at e13 '<member_name>'
+    before finishing.
+  action: extract
+  target:
+    description: cell located by label from 'NAME:'
+    strategies:
+    - kind: label
+      role: cell
+      anchor_text: 'NAME:'
+      direction: right
+      max_distance: 420.0
+      region: workframe
+      note: The control immediately right of the label 'NAME:'. This product does not associate labels
+        with inputs, so adjacency is the only semantic link available -- and it is the same link a human
+        uses.
+    - kind: ordinal
+      role: cell
+      region: workframe
+      index: 7
+      note: Positional fallback. If this is the strategy that fires, the screen has changed and the capability
+        should be reviewed.
+    verify:
+      role: cell
+      enabled: true
+      min_confidence: 0.45
+    on_ambiguity: fail
+    recorded:
+      role: cell
+      region: workframe
+      rect:
+        x: 326.625
+        y: 72.0
+        w: 117.03125
+        h: 18.0
+      rejected_strategies:
+      - 'row_cell: [0] row_cell: 0 candidates'
+      - 'row_cell: [0] row_cell: 0 candidates'
+      - 'label: verified'
+  bind: member_name
+  parse: raw
+  expect_navigation: false
+  signature_hint: sig_c68985f8331cb3b6
+  risk: safe
+  optional: false
+  retry:
+    attempts: 2
+    backoff_ms: 750
+    settle_ms: 300
+  timeout_ms: 15000
+checkpoint:
+  id: final
+  description: On ^/desk$ with every declared output visible.
+  condition:
+    all_of:
+    - route_matches: ^/desk$
+    - element_present:
+        description: cell located by label from 'SHARE SAVINGS'
+        strategies:
+        - kind: label
+          role: cell
+          anchor_text: SHARE SAVINGS
+          direction: right
+          max_distance: 420.0
+          region: workframe
+          note: The control immediately right of the label 'SHARE SAVINGS'. This product does not associate
+            labels with inputs, so adjacency is the only semantic link available -- and it is the same
+            link a human uses.
+        - kind: label
+          role: cell
+          anchor_text: CURRENT BALANCE
+          direction: below
+          max_distance: 420.0
+          region: workframe
+          note: The control immediately below of the label 'CURRENT BALANCE'. This product does not associate
+            labels with inputs, so adjacency is the only semantic link available -- and it is the same
+            link a human uses.
+        - kind: row_cell
+          role: cell
+          anchor_text: SHARE SAVINGS
+          rank: 0
+          column_header: CURRENT BALANCE
+          region: workframe
+          note: Read the value at the intersection of the row identified by 'SHARE SAVINGS' and the 'CURRENT
+            BALANCE' column.
+        - kind: row_cell
+          role: cell
+          text_pattern: ^-?\(?\$?[0-9][0-9,]*\.[0-9]{2}\)?$
+          anchor_text: SHARE SAVINGS
+          rank: 0
+          region: workframe
+          note: Same row, first cell matching the expected value shape.
+        - kind: ordinal
+          role: cell
+          region: workframe
+          index: 22
+          note: Positional fallback. If this is the strategy that fires, the screen has changed and the
+            capability should be reviewed.
+        verify:
+          role: cell
+          text_pattern: ^-?\(?\$?[0-9][0-9,]*\.[0-9]{2}\)?$
+          enabled: true
+          min_confidence: 0.45
+        on_ambiguity: fail
+        recorded:
+          role: cell
+          region: workframe
+          rect:
+            x: 411.59375
+            y: 160.0
+            w: 100.5625
+            h: 15.0
+    - element_present:
+        description: cell located by label from 'NAME:'
+        strategies:
+        - kind: label
+          role: cell
+          anchor_text: 'NAME:'
+          direction: right
+          max_distance: 420.0
+          region: workframe
+          note: The control immediately right of the label 'NAME:'. This product does not associate labels
+            with inputs, so adjacency is the only semantic link available -- and it is the same link a
+            human uses.
+        - kind: ordinal
+          role: cell
+          region: workframe
+          index: 7
+          note: Positional fallback. If this is the strategy that fires, the screen has changed and the
+            capability should be reviewed.
+        verify:
+          role: cell
+          enabled: true
+          min_confidence: 0.45
+        on_ambiguity: fail
+        recorded:
+          role: cell
+          region: workframe
+          rect:
+            x: 326.625
+            y: 72.0
+            w: 117.03125
+            h: 18.0
+          rejected_strategies:
+          - 'row_cell: [0] row_cell: 0 candidates'
+          - 'row_cell: [0] row_cell: 0 candidates'
+          - 'label: verified'
+  signature_hint: sig_c68985f8331cb3b6
+recovery:
+  interstitials:
+  - name: system_notice
+    when:
+      all_of:
+      - text_present: SYSTEM NOTICE
+      - text_present: ACKNOWLEDGE
+    dismiss:
+    - id: ack_notice
+      intent: Acknowledge the maintenance notice
+      action: click
+      target:
+        description: ACKNOWLEDGE button on the notice screen
+        strategies:
+        - kind: role_name
+          role: button
+          name: ACKNOWLEDGE
+        verify:
+          role: button
+          enabled: true
+          min_confidence: 0.45
+        on_ambiguity: fail
+      parse: raw
+      expect_navigation: false
+      risk: safe
+      optional: false
+      retry:
+        attempts: 2
+        backoff_ms: 750
+        settle_ms: 300
+      timeout_ms: 15000
+    max_occurrences: 2
+    note: 'Broadcast maintenance banner. Can appear before any screen, at any point in a flow, and must
+      be acknowledged before the underlying screen renders.
+
+      '
+  transient:
+  - name: slow_host_response
+    when:
+      any_of:
+      - text_present: PLEASE WAIT
+      - text_present: PROCESSING
+    max_occurrences: 4
+    note: 'The core host link stalls under load. The page eventually renders; the correct response is
+      to wait and re-observe, not to re-submit -- a re-submit on a write flow would double-post.
+
+      '
+  session_expired:
+    any_of:
+    - text_matches: CSV-440
+    - all_of:
+      - text_present: OPERATOR SIGN ON
+      - text_present: OPERATOR ID
+  reauth_capability: sign_on_coreserv
+  hard_error:
+    any_of:
+    - text_matches: CSV-500
+    - text_present: CORESERV SYSTEM ERROR
+policy:
+  allowed_routes:
+  - ^/desk$
+  allowed_actions:
+  - click
+  - extract
+  - type
+  max_steps: 13
+  timeout_ms: 107460
+  irreversible_requires_approval: true
+  redact_patterns:
+  - TAX ID \(SSN\)\s*:?\s*[0-9-]+
+crystallization:
+  execution_type: 3
+  status: candidate
+  gates:
+    t3_to_t2_min_runs: 3
+    t3_to_t2_min_sequence_stability: 0.9
+    t2_to_t1_min_runs: 5
+    t2_to_t1_min_resolution_stability: 0.99
+    max_safety_violations: 0
+    require_acceptance_tests: true
+    require_human_review_for_t1: true
+  evidence:
+    successful_runs: 0
+    failed_runs: 0
+    distinct_input_sets: 0
+    safety_violations: 0
+    human_interventions: 0
+    action_sequence_stability: 0.0
+    resolution_stability: 0.0
+    degraded_resolutions: 0
+    drift_signals: 0
+    successful_runs_since_demotion: 0
+    failed_runs_since_demotion: 0
+    human_reviewed: false
+  acceptance_tests:
+  - name: recorded_happy_path
+    inputs_ref: recorded_happy_path
+    expect_outcome: OK
+    expect_outputs_present:
+    - savings_balance
+    - member_name
+    expect_output_matches:
+      savings_balance: ^-?\(?\$?[0-9][0-9,]*\.[0-9]{2}\)?$
+_digest: sha256:8dbe5384cffbfe0f3c6e3798a9f71885

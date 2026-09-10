@@ -1,0 +1,29 @@
+[console] operator console at http://127.0.0.1:8765/
+[harness] armed fault: {"armed":"app_error","remaining":1}
+
+[replay] invoking read_member_savings_balance with member_number=10000001
+
+[replay] first verdict: failed / APPLICATION_ERROR
+
+[operator] sees intervention int_d281f81f10: APPLICATION_ERROR: any_of[text_matches /CSV-500/ -> True; text_present 'CORESERV SYSTEM ER
+[operator] took control -- broker state is now 'human'
+[operator] live frame: 25390 bytes of PNG
+[operator] clicked 'MEMBER INQUIRY' at (94,67)
+[operator] typed the member number into the inquiry field
+[operator] clicked 'INQUIRE' at (489,59)
+[operator] released control back to the automation
+
+[replay] final verdict : success / OK_AFTER_HANDOFF
+          description   : Completed by operator j.reyes on the live session.
+          evidence      : /home/claude/pcx/evidence/handoff-20260909T042202-a079
+
+[audit] control-transfer trail recorded in the run log:
+  t= 8.289s escalation_raised        {"request_id": "int_d281f81f10", "reason": "APPLICATION_ERROR: any_of[text_matches /CSV-500/ -> True; text_present 'CORE
+  t= 8.312s handoff_claimed          {"request_id": "int_d281f81f10", "operator": "j.reyes"}
+  t=  8.85s human_action             {"action": "click", "detail": "click (94,67)"}
+  t= 9.346s human_action             {"action": "click", "detail": "click (385,59)"}
+  t= 9.491s human_action             {"action": "type", "detail": "type 8 chars"}
+  t=10.054s human_action             {"action": "click", "detail": "click (489,59)"}
+  t=10.057s handoff_released         {"request_id": "int_d281f81f10", "disposition": "resume", "note": "CoreServ threw CSV-500; re-ran the inquiry by hand, s
+  t=10.058s escalation_resolved      {"disposition": "resume", "operator": "j.reyes", "note": "CoreServ threw CSV-500; re-ran the inquiry by hand, screen is 
+  t=10.392s checkpoint_after_handoff {"passed": true, "detail": "route_matches /^/desk$/ -> True (path=/desk); element_present -> e35 via label[0] p=0.90; el

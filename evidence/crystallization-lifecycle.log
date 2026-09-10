@@ -1,0 +1,74 @@
+
+── starting point: freshly discovered, Type 3
+read_member_savings_balance@v1   digest sha256:8dbe5384cffbfe0f3c6e3798a9f71885
+  execution type : Type 3   status: candidate
+  side effect    : read_only
+  successful runs: 0   failed: 0
+  distinct inputs: 0
+  seq stability  : 0.00
+  loc stability  : 0.00   degraded: 0
+  drift signals  : 0   tenants seen: -
+  safety viol.   : 0   human interventions: 0
+
+  promotion gate -> Type 2
+    FAIL successful runs 0/3
+
+── three successful replays with distinct inputs
+[replay] SUCCESS  outcome=OK
+[replay] SUCCESS  outcome=OK
+[replay] SUCCESS  outcome=OK
+
+── promotion gate: Type 3 -> Type 2
+  safety viol.   : 0   human interventions: 0
+
+  promotion gate -> Type 2
+    PASS successful runs 3/3
+    PASS action-sequence stability 1.00/0.90
+    PASS safety violations 0/0
+    PASS human interventions 0 (must be 0)
+    PASS acceptance tests present: 1
+  => ELIGIBLE
+[promote] promoted to Type 2
+
+── five more hybrid runs, then the gate to fully deterministic
+[replay] SUCCESS  outcome=OK
+[replay] SUCCESS  outcome=OK
+[replay] SUCCESS  outcome=OK
+[replay] SUCCESS  outcome=OK
+[replay] SUCCESS  outcome=OK
+[promote] refused: not eligible for Type 1: PASS successful runs 8/5; PASS locator resolution stability 1.00/0.99; PASS distinct input sets 4/2; PASS safety violations 0/0; FAIL human review: PENDING
+[promote] promoted to Type 1
+read_member_savings_balance@v1   digest sha256:8dbe5384cffbfe0f3c6e3798a9f71885
+  execution type : Type 1   status: active
+  side effect    : read_only
+  successful runs: 8   failed: 0
+  distinct inputs: 4
+  seq stability  : 1.00
+  loc stability  : 1.00   degraded: 0
+  drift signals  : 0   tenants seen: default
+
+── regression: the application throws CSV-500 under a promoted capability
+[circuit-breaker] demoted to Type 2: hard failure: APPLICATION_ERROR
+[replay] FAILED  outcome=APPLICATION_ERROR
+read_member_savings_balance@v1   digest sha256:8dbe5384cffbfe0f3c6e3798a9f71885
+  execution type : Type 2   status: quarantined
+  side effect    : read_only
+  successful runs: 8   failed: 1
+  distinct inputs: 4
+  seq stability  : 1.00
+  loc stability  : 1.00   degraded: 0
+  drift signals  : 0   tenants seen: default
+
+── recovery: clean runs return it to candidacy
+[replay] SUCCESS  outcome=OK
+[replay] SUCCESS  outcome=OK
+[circuit-breaker] quarantine cleared for read_member_savings_balance@v1 after clean runs
+[replay] SUCCESS  outcome=OK
+read_member_savings_balance@v1   digest sha256:8dbe5384cffbfe0f3c6e3798a9f71885
+  execution type : Type 2   status: candidate
+  side effect    : read_only
+  successful runs: 11   failed: 1
+  distinct inputs: 4
+  seq stability  : 1.00
+  loc stability  : 1.00   degraded: 0
+  drift signals  : 0   tenants seen: default
