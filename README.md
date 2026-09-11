@@ -11,6 +11,52 @@ circuit breaker **demotes** it when it regresses.
 > The model discovers. The artifact becomes a reusable capability. Deterministic
 > replay is how an agent invokes it in production.
 
+---
+
+### An LLM learns the flow, once
+
+![An LLM driving a legacy teller workstation, deciding one action at a time](docs/media/discovery.gif)
+
+Six turns against a real `<frameset>`. The caption under each frame is the
+model's **own** rationale, copied out of the run log — not written afterwards.
+The numbered boxes are the accessibility tree it was addressing: it answers with
+`e9`, and there is no CSS selector anywhere in the system.
+
+### Then it never runs again
+
+![The same flow replayed deterministically, with no model in the loop](docs/media/replay-success.gif)
+
+Same flow, a member it was *not* recorded against, typed outputs — and
+`llm calls: 0`. That is the whole project in one line.
+
+### When it cannot safely proceed, a human takes the live session
+
+![A stuck replay escalating to a human operator who finishes it by hand](docs/media/handoff.gif)
+
+Not a ticket: the same browser, mid-flow, with the state already built up. The
+operator finishes by hand and hands control back, and the engine re-checks the
+checkpoint rather than assuming either outcome.
+
+### And it earns the right to be cheap
+
+```
+── three successful replays with distinct inputs
+  promotion gate -> Type 2
+    PASS successful runs 3/3          PASS safety violations 0/0
+    PASS action-sequence stability 1.00/0.90
+    PASS human interventions 0 (must be 0)
+    PASS acceptance tests present: 1
+  => ELIGIBLE
+[promote] promoted to Type 2
+```
+
+Every gate reported individually, passing and failing — and a circuit breaker
+running the other way, so being wrong is recoverable before anyone notices.
+
+**[The full gallery](docs/GALLERY.md)** has every scenario: both business
+outcomes, the caller error that never touches the application, three recoveries,
+a hard failure, and the irreversible-step guardrail with and without approval.
+
 The target is a mock **legacy credit-union back-office application** (`target_app/`)
 — a real `<frameset>`, nested layout tables, ASP.NET-style generated ids, inputs
 with no `<label for>`, and injectable runtime faults (record-not-found, permission
@@ -22,6 +68,7 @@ Runs from a real discovery and real replays: **[evidence/](evidence/)**.
 Pointing it at a **live public website**: **[docs/LIVE_SITE_DEMO.md](docs/LIVE_SITE_DEMO.md)**
 — one profile file, one policy entry, one tenant overlay, no code changes.
 Demoing the whole thing live, act by act: **[docs/WALKTHROUGH.md](docs/WALKTHROUGH.md)**.
+Every scenario as a recorded run: **[docs/GALLERY.md](docs/GALLERY.md)**.
 
 ---
 
@@ -80,7 +127,7 @@ variable is refused before a browser starts, naming every variable it wanted.
 
 ## Running without live services
 
-`python3 -m pytest tests/ -q` (93 tests) needs no browser, no model and no network: locator
+`python3 -m pytest tests/ -q` (95 tests) needs no browser, no model and no network: locator
 resolution, the condition language, contract validation, the guardrails, the
 redactor, tenant specialization, the compiler and the crystallization lifecycle
 are all exercised against synthetic screens.
