@@ -1,0 +1,159 @@
+# Application profile: Parasoft "ParaBank" 3.0 — a LIVE, PUBLIC demo bank.
+#
+# ParaBank is Parasoft's open-source demo banking application
+# (github.com/parasoft/parabank), published expressly so people can point
+# testing and automation tools at it. It is the closest public analogue to the
+# back-office systems this project targets: a real login, an accounts overview
+# with balances, transaction search, transfers and bill pay.
+#
+# Everything below is per-PRODUCT knowledge, exactly like the CoreServ profile:
+# the error vocabulary, what may appear unexpectedly, what must never be touched
+# autonomously, and which on-screen text is too volatile to anchor a locator on.
+# A capability recorded against ParaBank inherits all of it on the day it is
+# recorded -- no code changes, no engine changes.
+#
+# HONEST CAVEAT: the detectors below were authored from ParaBank's public pages
+# and its published source, not from a full authenticated crawl. Treat them as a
+# good first profile rather than a finished one. The first discovery run will
+# tell you if a detector is wrong -- a mis-detected screen shows up immediately
+# as an UNRECOGNIZED_SCREEN or a wrong outcome code, and this file is where you
+# fix it. That iteration loop is the design working, not a defect.
+
+# Which hosts serve this product. A run finds its profile from its entry point,
+# so --profile is an override rather than something to remember.
+hosts:
+  - "parabank.parasoft.com"
+
+app:
+  vendor: "Parasoft"
+  product: "ParaBank"
+  version: "3.0"
+
+description: >
+  Java/JSP retail banking demo. Server-rendered, session-cookie authenticated,
+  conventional semantic markup (unlike CoreServ). Errors are rendered as a
+  paragraph with class "error" inside the right-hand panel; there are no
+  numbered error codes, so detectors key on message text -- which is more
+  fragile than a code and is called out as such in REPORT section 4.
+
+# --------------------------------------------------------------------------- #
+# Expected business outcomes: results a caller must handle, not bugs.
+# --------------------------------------------------------------------------- #
+outcomes:
+  - code: INVALID_CREDENTIALS
+    kind: denied
+    description: >
+      The username and password were not accepted. Distinct from a locked or
+      absent account: ParaBank does not distinguish those publicly.
+    detect:
+      any_of:
+        - text_present: "The username and password could not be verified"
+        - text_present: "Please enter a username and password"
+    terminal: true
+    retryable: false
+    remediation: "Check the credentials. Do not retry -- repeated attempts will not succeed."
+
+  - code: ACCOUNT_NOT_FOUND
+    kind: business
+    description: >
+      The account number is well-formed but is not one of the signed-in
+      customer's accounts. A legitimate answer to a lookup.
+    detect:
+      any_of:
+        - text_present: "Could not find account"
+        - text_present: "The account does not exist"
+    terminal: true
+    retryable: false
+    remediation: "Confirm the account number belongs to this customer."
+
+  - code: VALIDATION_ERROR
+    kind: business
+    description: >
+      The form was rejected before any work was done -- a missing required
+      field, a non-numeric amount, or an amount the account cannot cover.
+    detect:
+      any_of:
+        - text_present: "is required"
+        - text_present: "Please enter a valid amount"
+        - text_present: "The amount cannot be greater than"
+        - text_present: "Invalid amount"
+    terminal: true
+    retryable: false
+    remediation: "Correct the input and re-invoke. Retrying unchanged will not help."
+
+  - code: NO_TRANSACTIONS_FOUND
+    kind: business
+    description: >
+      A transaction search that ran correctly and matched nothing. Emphatically
+      not an error -- a caller that treats it as one will retry forever.
+    detect:
+      text_present: "No transactions found"
+    terminal: true
+    retryable: false
+    remediation: "Widen the date range or amount, or accept the empty result."
+
+# --------------------------------------------------------------------------- #
+# Recoverable conditions, handled inside a replay without the caller noticing.
+# --------------------------------------------------------------------------- #
+transient:
+  - name: slow_public_host
+    note: >
+      ParaBank is a shared public instance and is periodically slow or briefly
+      unavailable while its demo database is reset. Waiting is correct; re-
+      submitting a transfer or a bill payment is not, because a re-submit on a
+      write flow double-posts.
+    when:
+      any_of:
+        - text_present: "Please wait"
+        - text_present: "503 Service"
+        - text_present: "Service Temporarily Unavailable"
+    max_occurrences: 4
+    dismiss: []
+
+session_expired:
+  # ParaBank bounces an expired session to the login panel, which is identifiable
+  # by the Customer Login heading plus the absence of the signed-in menu.
+  all_of:
+    - text_present: "Customer Login"
+    - text_absent: "Log Out"
+
+reauth_capability: sign_on_parabank
+
+hard_error:
+  any_of:
+    - text_present: "An internal error has occurred"
+    - text_present: "HTTP Status 500"
+    - text_present: "Exception Report"
+
+# --------------------------------------------------------------------------- #
+# Safety
+# --------------------------------------------------------------------------- #
+# Controls that move money or mutate the shared demo database. On a PUBLIC site
+# this list matters more than it does locally: other people are using this
+# instance, and "Clean/Initialize Database" on the admin page would wipe their
+# data as well as yours. The deployment policy denies /admin.htm outright; these
+# patterns are the second line.
+irreversible_controls:
+  - "TRANSFER"
+  - "SEND PAYMENT"
+  - "BILL ?PAY"
+  - "CLEAN"
+  - "INITIALIZE"
+  - "\\bDELETE\\b"
+  - "OPEN NEW ACCOUNT"
+  - "REQUEST LOAN"
+
+# Text that changes between sessions, customers or days, and can never be a
+# locator anchor however stable it looked in the one screen a recording saw.
+volatile_text:
+  - "^Welcome"                       # "Welcome John Smith" in the header
+  - "^\\$[0-9,.-]+$"                 # balances and amounts
+  - "^[0-9]{5,}$"                    # account numbers
+  - "^[0-9]{2}-[0-9]{2}-[0-9]{4}$"   # dates
+  - "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+  - "Latest News"
+  - "^Account #"
+
+redact_patterns:
+  - "SSN\\s*:?\\s*[0-9-]+"
+  - "Account\\s*#?\\s*[0-9]{5,}"

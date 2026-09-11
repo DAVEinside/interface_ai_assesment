@@ -1,0 +1,10 @@
+tenant_id: parabank
+base_url: https://parabank.parasoft.com
+label: Parasoft ParaBank (public demo)
+step_locator_overrides: {}
+text_overrides: {}
+timing_multiplier: 2.5
+disabled_steps: []
+notes: Live public instance shared with other testers. timing_multiplier 2.5 because
+  a public host over the internet is far slower than localhost, and the step timeouts
+  were recorded against localhost.

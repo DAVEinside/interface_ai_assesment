@@ -673,9 +673,14 @@ class Capability(BaseModel):
                 _apply_vocabulary(step.target, overlay.text_overrides)
                 _apply_vocabulary(step.expect, overlay.text_overrides)
                 _apply_vocabulary(step.precondition, overlay.text_overrides)
-            if overlay.timing_multiplier != 1.0:
-                step.timeout_ms = int(step.timeout_ms * overlay.timing_multiplier)
-                step.retry.backoff_ms = int(step.retry.backoff_ms * overlay.timing_multiplier)
+            # `timing_multiplier` is deliberately NOT applied here. Rewriting
+            # step.timeout_ms would change the digest -- timings are inside it --
+            # so a tenant that merely needs longer waits would look like a
+            # different flow, and its runs would land in the ledger under a
+            # digest the base artifact never queries. The multi-tenant claim is
+            # "one artifact, one track record, many tenants"; splitting the track
+            # record by latency budget silently breaks it. The engine scales the
+            # budget at run time instead, where it belongs.
 
         if overlay.text_overrides:
             _apply_vocabulary(clone.checkpoint.condition, overlay.text_overrides)

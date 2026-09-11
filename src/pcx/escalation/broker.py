@@ -118,6 +118,10 @@ class SessionBroker:
         self.surface = None  # set by the runner; the live surface under transfer
         self.run_id: str = ""
         self.listeners: list[asyncio.Queue] = []
+        #: Set once an operator console is actually serving. Without one there is
+        #: nobody who *can* answer an intervention, and a run that parks silently
+        #: for the full timeout looks like a hang rather than a design decision.
+        self.console_url: str | None = None
 
     # -- introspection --------------------------------------------------------
     def open_requests(self) -> list[InterventionRequest]:

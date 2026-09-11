@@ -9,12 +9,28 @@ allowed_hosts:
   - "localhost:8799"
   - "127.0.0.1:8798"      # CoreServ 7.2 -- Northgate FCU (tenant: northgate_cu)
 
+  # Live public demo sites. Both are published expressly for pointing testing
+  # and automation tools at. Adding a host here is a deliberate act: it is the
+  # ONLY place a deployment grants the agent reach beyond localhost, and a
+  # capability bound to a tenant is additionally pinned to that one host at run
+  # time, so it cannot wander between them.
+  - "parabank.parasoft.com"          # Parasoft ParaBank (tenant: parabank)
+  - "the-internet.herokuapp.com"     # Elemental Selenium (tenant: the_internet)
+
 # Routes no capability may touch, whatever it claims. /admin is the fault
 # injector: it exists for the test harness and must be unreachable from the
 # agent, which is the point of listing it here.
 denied_routes:
   - "^/admin"
   - "^/signoff"
+  # ParaBank's admin page can wipe and re-seed the shared demo database that
+  # other people are also using. Denying the route is not enough on its own --
+  # the irreversible-control patterns in the profile are the second line -- but
+  # it is the cheapest and most absolute of the two.
+  - "/parabank/admin\\.htm"
+  # Nothing should be signing out mid-flow; a sign-out is how a replay loses a
+  # session it is about to need.
+  - "/parabank/logout\\.htm"
 
 # Action verbs available at all. Note the absence of file upload, download and
 # script execution: they are not in the vocabulary, so they cannot be reached

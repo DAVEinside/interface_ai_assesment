@@ -266,6 +266,23 @@ Outcome detectors survive vocabulary drift for free because they key on product
 error codes (`MBR-404`), not on the sentence next to them. That is a deliberate
 authoring rule for profiles, and there is a test for it.
 
+**A different product entirely, not just a different tenant.** The same
+mechanism absorbs a wholly unrelated application. `profiles/parabank-3.0.yaml`
+and `profiles/the-internet.yaml` point the system at two live public websites —
+different markup, different domain, different error vocabulary, HTTPS, real
+latency — and adding them took **one profile file, one deployment-policy entry
+and one tenant overlay each. No code changed.** That is the surface abstraction
+paying off rather than being asserted: `playwright` is imported in exactly one
+file out of ~25, and the locator vocabulary is role, name, text and geometry.
+
+Doing it did surface one real bug, of a kind localhost could never expose: the
+compiler stripped the caller's *default* base URL from the recorded entry point,
+so a capability recorded against any other host baked that host into the
+artifact and every later `specialize()` silently became a no-op. Fixed, with two
+tests. See `docs/LIVE_SITE_DEMO.md`, which is also candid that the live runs
+themselves were not executed from the build sandbox — its egress blocks both
+hosts — and lists what is most likely to need tuning on a first run.
+
 **Detecting per-tenant drift at scale.** Every run records `(digest, tenant,
 action_sequence, degraded_resolutions, drift_signals)`. Three signals order
 themselves naturally: a rise in *degraded resolutions* for one tenant means that

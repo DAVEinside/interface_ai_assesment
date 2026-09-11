@@ -6,8 +6,13 @@ __pycache__/
 venv/
 .env
 
+# Acceptance-test fixtures hold real identifiers from the system a capability was
 # recorded against. They stay on the machine that recorded it.
 capabilities/*/fixtures/
 
+# Local evidence from ad-hoc runs. The curated evidence in evidence/ is committed
 # deliberately; see evidence/README.md.
+evidence/*/
+evidence/
 evidence/scratch/
+Claude outputs/

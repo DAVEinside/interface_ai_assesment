@@ -300,3 +300,85 @@ def test_quarantine_does_not_clear_while_failures_continue():
         row["at"] = 300.0
     capability.crystallization.evidence = lifecycle.summarize(rows, digest, since=200.0)
     assert not lifecycle.clear_quarantine(capability)
+
+
+def test_entrypoint_is_parameterized_even_on_an_unfamiliar_host():
+    """Recording against a host that is not the default deployment.
+
+    The entry point must always come out as `{{ tenant.base_url }}/path`. If the
+    compiler strips only the caller's default base URL, a capability recorded
+    against a second tenant, a staging instance or a live site silently bakes
+    that host into the artifact -- and every later `specialize()` is a no-op
+    because there is no template left to substitute.
+    """
+    trace = _trace()
+    trace.entrypoint = "https://parabank.parasoft.com/parabank/overview.htm"
+    for step in trace.steps:
+        step.before.route = trace.entrypoint
+        if step.after:
+            step.after.route = trace.entrypoint
+
+    capability = compile_capability(
+        trace, capability_id="read_balance", base_url="http://127.0.0.1:8799"
+    )
+    assert capability.surface.entrypoint == "{{ tenant.base_url }}/parabank/overview.htm"
+    assert "parabank.parasoft.com" not in capability.model_dump_json()
+
+    from pcx.artifact.schema import TenantOverlay
+
+    bound = capability.specialize(
+        TenantOverlay(tenant_id="parabank", base_url="https://parabank.parasoft.com")
+    )
+    assert bound.resolved_entrypoint() == "https://parabank.parasoft.com/parabank/overview.htm"
+
+
+def test_entrypoint_on_the_default_host_still_strips_the_default():
+    trace = _trace()
+    capability = compile_capability(
+        trace, capability_id="read_balance", base_url="http://127.0.0.1:8799"
+    )
+    assert capability.surface.entrypoint == "{{ tenant.base_url }}/desk"
+
+
+# --------------------------------------------------------------------------- #
+# Automatic promotion, and the gate that reads human interventions
+# --------------------------------------------------------------------------- #
+
+
+def test_a_run_that_needed_a_human_blocks_promotion():
+    """`human_interventions == 0` is a T3 -> T2 gate, and it used to be
+    vacuously true: ReplayResult had no such field, so every call to record_run
+    passed the default 0. A flow that needed hands is not a flow that has earned
+    fewer of them, and the gate has to be able to say so."""
+    from pcx.artifact.schema import Evidence
+    from pcx.crystallize.lifecycle import evaluate_promotion
+
+    capability = _capability()
+    capability.crystallization.evidence = Evidence(
+        successful_runs=5, action_sequence_stability=1.0, human_interventions=0
+    )
+    assert evaluate_promotion(capability).eligible
+
+    capability.crystallization.evidence.human_interventions = 1
+    gate = evaluate_promotion(capability)
+    assert not gate.eligible
+    assert any("human interventions 1" in r for r in gate.reasons)
+
+
+def test_the_replay_result_carries_the_intervention_count():
+    from pcx.replay.outcomes import ReplayResult
+
+    result = ReplayResult(run_id="r", capability="c", version=1, digest="d", status="success")
+    assert result.human_interventions == 0
+    result.human_interventions += 1
+    assert result.human_interventions == 1
+
+
+def test_auto_promotion_is_on_by_default_and_can_be_turned_off(monkeypatch):
+    from pcx.config import Settings
+
+    monkeypatch.delenv("PCX_AUTO_PROMOTE", raising=False)
+    assert Settings().auto_promote is True
+
+    monkeypatch.setenv("PCX_AUTO_PROMOTE", "0")
+    assert Settings().auto_promote is False

@@ -36,6 +36,13 @@ class AppProfile(BaseModel):
     """Product-level knowledge shared by every capability recorded against it."""
 
     app: AppIdentity
+    #: Hosts this product is served from. Lets a run find its own profile from
+    #: its entry point, so pointing the system at a new site is a file you add
+    #: rather than a flag you must remember -- and, more to the point, so that
+    #: forgetting the flag cannot silently apply another product's error
+    #: vocabulary, interstitials and session detectors to a site they describe
+    #: nothing about.
+    hosts: list[str] = Field(default_factory=list)
     description: str = ""
     outcomes: list[Outcome] = Field(default_factory=list)
     interstitials: list[InterstitialRule] = Field(default_factory=list)
@@ -85,6 +92,29 @@ class AppProfile(BaseModel):
             if profile.app.key() == key.lower():
                 return profile
         return None
+
+
+def for_host(host: str, directory: Path | None = None) -> "AppProfile | None":
+    """The profile that claims this host, if any. Exact match, then suffix.
+
+    Suffix matching is what makes ``parabank.parasoft.com`` findable from a
+    profile that lists ``parasoft.com``, without a profile listing ``com``
+    matching everything: a suffix only counts on a dot boundary.
+    """
+    host = (host or "").lower().strip()
+    if not host:
+        return None
+    bare = host.split(":")[0]
+    for profile in load_all(directory):
+        for claimed in profile.hosts:
+            claimed = claimed.lower().strip()
+            if not claimed:
+                continue
+            if host == claimed or bare == claimed:
+                return profile
+            if bare.endswith("." + claimed):
+                return profile
+    return None
 
 
 def load_all(directory: Path | None = None) -> list[AppProfile]:

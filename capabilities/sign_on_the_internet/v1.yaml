@@ -1,0 +1,361 @@
+schema_version: pcx.capability/1.0
+id: sign_on_the_internet
+version: 1
+title: Sign On The Internet
+description: Sign in to the secure area using the supplied credentials. Stop once the page confirms you
+  are logged into a secure area.
+created_at: '2026-09-10T19:32:05.286523+00:00'
+created_by_run: discovery-20260910T153123-59b8
+discovered_with_model: claude-sonnet-4-5-20250929
+author: llm_discovery
+surface:
+  kind: web
+  adapter: pcx.surfaces.web:WebSurface
+  app:
+    vendor: Elemental Selenium
+    product: The Internet
+    version: current
+  entrypoint: '{{ tenant.base_url }}/login'
+  viewport:
+  - 1280
+  - 800
+contract:
+  summary: Sign in to the secure area using the supplied credentials. Stop once the page confirms you
+    are logged into a secure area.
+  inputs:
+  - name: username
+    type: string
+    description: Username.
+    required: true
+    sensitivity: pii_reference
+  - name: password
+    type: string
+    description: Password.
+    required: true
+    sensitivity: secret
+  outputs:
+  - name: confirmation
+    type: string
+    description: Confirmation.
+    required: true
+    sensitivity: internal
+  outcomes:
+  - code: OK
+    kind: success
+    description: The flow completed and every declared output was captured.
+    terminal: true
+    retryable: false
+    remediation: ''
+  - code: INVALID_CREDENTIALS
+    kind: denied
+    description: 'The username or password was rejected. The application distinguishes the two, which
+      is unusual and worth preserving in the message.
+
+      '
+    detect:
+      any_of:
+      - text_present: Your username is invalid!
+      - text_present: Your password is invalid!
+    terminal: true
+    retryable: false
+    remediation: Use tomsmith / SuperSecretPassword! as printed on the login page.
+  - code: NOT_AUTHENTICATED
+    kind: denied
+    description: A protected page was requested without a session.
+    detect:
+      text_present: You must login to view the secure area!
+    terminal: true
+    retryable: false
+    remediation: Sign on first; the sign_on_the_internet capability does this.
+  side_effect: reversible_write
+  idempotent: false
+  typical_duration_ms: 28560
+steps:
+- id: s1
+  intent: I see a login page with username and password fields. I need to enter the username '{{ inputs.username
+    }}' first.
+  action: type
+  target:
+    description: textbox 'Username'
+    strategies:
+    - kind: role_name
+      role: textbox
+      name: Username
+      note: Accessible name -- the most portable identity available.
+    - kind: label
+      role: textbox
+      anchor_text: Username
+      direction: below
+      max_distance: 420.0
+      region: login
+      note: The control immediately below of the label 'Username'. This product does not associate labels
+        with inputs, so adjacency is the only semantic link available -- and it is the same link a human
+        uses.
+    - kind: ordinal
+      role: textbox
+      region: login
+      index: 0
+      note: Positional fallback. If this is the strategy that fires, the screen has changed and the capability
+        should be reviewed.
+    verify:
+      role: textbox
+      name_pattern: Username
+      editable: true
+      enabled: true
+      min_confidence: 0.45
+    on_ambiguity: fail
+    recorded:
+      role: textbox
+      name: Username
+      region: login
+      rect:
+        x: 162.8000030517578
+        y: 242.22500610351562
+        w: 454.40000915527344
+        h: 16.774993896484375
+  value: '{{ inputs.username }}'
+  parse: raw
+  expect_navigation: false
+  signature_hint: sig_cf141bc434fea514
+  risk: safe
+  optional: false
+  retry:
+    attempts: 2
+    backoff_ms: 750
+    settle_ms: 300
+  timeout_ms: 15000
+- id: s2
+  intent: I see the login page with username already filled in. Now I need to enter the password into
+    the password field (e8).
+  action: type
+  target:
+    description: textbox 'Password'
+    strategies:
+    - kind: role_name
+      role: textbox
+      name: Password
+      note: Accessible name -- the most portable identity available.
+    - kind: label
+      role: textbox
+      anchor_text: Password
+      direction: below
+      max_distance: 420.0
+      region: login
+      note: The control immediately below of the label 'Password'. This product does not associate labels
+        with inputs, so adjacency is the only semantic link available -- and it is the same link a human
+        uses.
+    - kind: ordinal
+      role: textbox
+      region: login
+      index: 1
+      note: Positional fallback. If this is the strategy that fires, the screen has changed and the capability
+        should be reviewed.
+    verify:
+      role: textbox
+      name_pattern: Password
+      editable: true
+      enabled: true
+      min_confidence: 0.45
+    on_ambiguity: fail
+    recorded:
+      role: textbox
+      name: Password
+      region: login
+      rect:
+        x: 162.8000030517578
+        y: 305.2250061035156
+        w: 454.40000915527344
+        h: 16.774993896484375
+  value: '{{ inputs.password }}'
+  parse: raw
+  expect_navigation: false
+  signature_hint: sig_cf141bc434fea514
+  risk: safe
+  optional: false
+  retry:
+    attempts: 2
+    backoff_ms: 750
+    settle_ms: 300
+  timeout_ms: 15000
+- id: s3
+  intent: I can see the login page with username and password fields already filled in. Now I need to
+    click the Login button (e10) to proceed with signing in.
+  action: click
+  target:
+    description: button '\uf090 Login'
+    strategies:
+    - kind: role_name
+      role: button
+      name:  Login
+      note: Accessible name -- the most portable identity available.
+    - kind: label
+      role: button
+      anchor_text: Password
+      direction: below
+      max_distance: 420.0
+      region: login
+      note: The control immediately below of the label 'Password'. This product does not associate labels
+        with inputs, so adjacency is the only semantic link available -- and it is the same link a human
+        uses.
+    - kind: text
+      role: button
+      text:  Login
+      note: Visible label text.
+    - kind: ordinal
+      role: button
+      region: login
+      index: 0
+      note: Positional fallback. If this is the strategy that fires, the screen has changed and the capability
+        should be reviewed.
+    verify:
+      role: button
+      name_pattern: \ Login
+      enabled: true
+      min_confidence: 0.45
+    on_ambiguity: fail
+    recorded:
+      role: button
+      name:  Login
+      region: login
+      rect:
+        x: 179.8000030517578
+        y: 357.6000061035156
+        w: 111.87501525878906
+        h: 32.0
+  parse: raw
+  expect:
+    route_matches: ^/secure$
+  expect_navigation: true
+  signature_hint: sig_3bd1975efce2803a
+  risk: reversible
+  optional: false
+  retry:
+    attempts: 2
+    backoff_ms: 750
+    settle_ms: 300
+  timeout_ms: 15000
+- id: s4
+  intent: I can see the confirmation message '<confirmation>' which confirms successful login. I need
+    to extract this confirmation message before finishing.
+  action: extract
+  target:
+    description: text located by ordinal
+    strategies:
+    - kind: ordinal
+      role: text
+      region: secure
+      index: 1
+      note: Positional fallback. If this is the strategy that fires, the screen has changed and the capability
+        should be reviewed.
+    verify:
+      role: text
+      enabled: true
+      min_confidence: 0.45
+    on_ambiguity: fail
+    recorded:
+      role: text
+      region: secure
+      rect:
+        x: 177.4250030517578
+        y: 40.82500076293945
+        w: 206.68751525878906
+        h: 16.0
+  bind: confirmation
+  parse: raw
+  expect_navigation: false
+  signature_hint: sig_3bd1975efce2803a
+  risk: safe
+  optional: false
+  retry:
+    attempts: 2
+    backoff_ms: 750
+    settle_ms: 300
+  timeout_ms: 15000
+checkpoint:
+  id: final
+  description: On ^/secure$ with every declared output visible.
+  condition:
+    all_of:
+    - route_matches: ^/secure$
+    - element_present:
+        description: text located by ordinal
+        strategies:
+        - kind: ordinal
+          role: text
+          region: secure
+          index: 1
+          note: Positional fallback. If this is the strategy that fires, the screen has changed and the
+            capability should be reviewed.
+        verify:
+          role: text
+          enabled: true
+          min_confidence: 0.45
+        on_ambiguity: fail
+        recorded:
+          role: text
+          region: secure
+          rect:
+            x: 177.4250030517578
+            y: 40.82500076293945
+            w: 206.68751525878906
+            h: 16.0
+  signature_hint: sig_3bd1975efce2803a
+recovery:
+  transient:
+  - name: slow_resource
+    when:
+      any_of:
+      - text_present: Loading...
+      - text_present: Please wait
+    max_occurrences: 4
+    note: '/dynamic_loading and /slow render their content only after a delay. The correct response is
+      to wait and re-observe; the `settle` in-flight request counter usually handles it before this rule
+      is reached.
+
+      '
+  hard_error:
+    any_of:
+    - text_present: Internal Server Error
+    - text_present: HTTP Status 500
+policy:
+  allowed_routes:
+  - ^/login$
+  - ^/secure$
+  allowed_actions:
+  - click
+  - extract
+  - type
+  max_steps: 12
+  timeout_ms: 85680
+  irreversible_requires_approval: true
+crystallization:
+  execution_type: 3
+  status: candidate
+  gates:
+    t3_to_t2_min_runs: 3
+    t3_to_t2_min_sequence_stability: 0.9
+    t2_to_t1_min_runs: 5
+    t2_to_t1_min_resolution_stability: 0.99
+    max_safety_violations: 0
+    require_acceptance_tests: true
+    require_human_review_for_t1: true
+  evidence:
+    successful_runs: 0
+    failed_runs: 0
+    distinct_input_sets: 0
+    safety_violations: 0
+    human_interventions: 0
+    action_sequence_stability: 0.0
+    resolution_stability: 0.0
+    degraded_resolutions: 0
+    drift_signals: 0
+    successful_runs_since_demotion: 0
+    failed_runs_since_demotion: 0
+    human_reviewed: false
+  acceptance_tests:
+  - name: recorded_happy_path
+    inputs_ref: recorded_happy_path
+    expect_outcome: OK
+    expect_outputs_present:
+    - confirmation
+_digest: sha256:d0a0ec12c2856076878c1660ac3bd845

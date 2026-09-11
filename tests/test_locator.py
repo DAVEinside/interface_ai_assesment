@@ -142,3 +142,71 @@ def test_label_direction(direction, expected):
     )
     res, element = resolve(loc, obs)
     assert res.ok and element.ref == expected
+
+
+def test_an_overridden_locator_that_matches_nothing_does_not_resolve():
+    """The forcing mechanism in scripts/demo_live_handoff.py.
+
+    Making a demo fail by handing the site a bad password makes it depend on
+    that site's authentication behaviour -- ParaBank is deliberately insecure and
+    accepts any password for a known username, so the run simply succeeds and
+    there is no escalation to watch. A locator that no longer resolves is forced
+    from inside this system, works anywhere, and is the failure the escalation
+    path exists for: the flow was fine until the application moved.
+    """
+    page = screen(
+        el("e20", Role.TEXTBOX, "Username", x=10, y=10, editable=True),
+        el("e30", Role.BUTTON, "Log In", x=10, y=70),
+    )
+    recorded = Locator(
+        description="Log In",
+        strategies=[Strategy(kind="role_name", role=Role.BUTTON, name="Log In")],
+    )
+    moved = Locator(
+        description="the sign-in control, as it was before the site was redesigned",
+        strategies=[Strategy(kind="role_name", role=Role.BUTTON, name="Sign In To Your Account")],
+    )
+
+    res, element = resolve(recorded, page)
+    assert res.ok and element.ref == "e30"
+
+    res, element = resolve(moved, page)
+    assert not res.ok and element is None
+
+
+def test_a_broken_override_reaches_the_step_through_the_tenant_overlay():
+    """It is applied with `step_locator_overrides` -- the same production
+    mechanism that pins a tenant's differing control -- not a test-only hook."""
+    from pcx.artifact.schema import (
+        Capability, Checkpoint, Condition, Contract, Outcome, Param, Step,
+        SurfaceBinding, TenantOverlay,
+    )
+
+    moved = Locator(
+        description="gone",
+        strategies=[Strategy(kind="role_name", role=Role.BUTTON, name="Sign In To Your Account")],
+    )
+    capability = Capability(
+        id="sign_on_parabank",
+        surface=SurfaceBinding(entrypoint="{{ tenant.base_url }}/parabank/index.htm"),
+        contract=Contract(
+            summary="sign on",
+            inputs=[Param(name="username")],
+            outputs=[Param(name="signed_in_customer")],
+            outcomes=[Outcome(code="OK", kind="success")],
+        ),
+        steps=[
+            Step(id="s3", intent="click Log In", action="click",
+                 target=Locator(description="Log In",
+                                strategies=[Strategy(kind="role_name", role=Role.BUTTON, name="Log In")]))
+        ],
+        checkpoint=Checkpoint(condition=Condition(text_present="Accounts Overview")),
+    )
+    overlay = TenantOverlay(
+        tenant_id="parabank", base_url="https://parabank.parasoft.com",
+        step_locator_overrides={"s3": moved},
+    )
+    bound = capability.specialize(overlay)
+
+    assert bound.step("s3").target.description == "gone"
+    assert capability.step("s3").target.description == "Log In", "the base artifact is untouched"

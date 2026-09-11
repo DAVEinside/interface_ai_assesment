@@ -111,6 +111,12 @@ class ReplayResult(BaseModel):
     llm_calls: int = Field(default=0, description="0 for a Type 1 replay. Non-zero is a defect there.")
     llm_tokens: int = 0
     degraded_resolutions: int = 0
+    human_interventions: int = Field(
+        default=0,
+        description="Times a human took control of the live session during this run. "
+                    "A promotion gate reads this: a flow that needed hands is not a "
+                    "flow that has earned fewer of them.",
+    )
     drift_signals: list[str] = Field(
         default_factory=list,
         description="Screens that did not match their recorded signature. Not failures.",

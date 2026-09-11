@@ -573,7 +573,15 @@ def compile_capability(
     if profile is not None:
         outcomes.extend(profile.outcomes)
 
-    entry_base = base_url or _origin(trace.entrypoint)
+    # The entry point must come out as `{{ tenant.base_url }}/path`, or the
+    # artifact is bound to whichever institution it happened to be recorded
+    # against -- which defeats the whole tenancy model.
+    #
+    # `base_url` is the caller's *default* deployment, and it is only the right
+    # thing to strip when the run actually happened there. Recording against any
+    # other host -- a second tenant, a staging instance, a live site -- has to
+    # fall back to the entry point's own origin, or the host is silently baked in.
+    entry_base = base_url if base_url and trace.entrypoint.startswith(base_url) else _origin(trace.entrypoint)
     entrypoint = trace.entrypoint.replace(entry_base, "{{ tenant.base_url }}")
 
     # The goal is free text a person typed, and people write "look up member

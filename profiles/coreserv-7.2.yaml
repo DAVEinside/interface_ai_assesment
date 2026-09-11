@@ -6,6 +6,13 @@
 # it. This is the answer to "how does replay handle exceptional states it was
 # never recorded hitting".
 
+# Which hosts serve this product. A run finds its profile from its entry point,
+# so --profile is an override rather than something to remember.
+hosts:
+  - "127.0.0.1:8799"      # Meridian CU
+  - "127.0.0.1:8798"      # Northgate FCU
+  - "localhost"
+
 app:
   vendor: "Meridian Data Systems"
   product: "CoreServ Teller Workstation"

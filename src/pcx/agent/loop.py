@@ -428,6 +428,20 @@ class DiscoveryLoop:
             },
         )
         self.recorder.event("escalation_raised", **intervention.model_dump(mode="json", exclude={"screen"}))
+        # Say who is being waited for. A run that parks for fifteen minutes with
+        # no console listening is indistinguishable from a hang, and the fix --
+        # re-run with --console -- is not guessable from the silence.
+        budget = int(self.broker.auto_timeout_s)
+        if self.broker.console_url:
+            self.reporter.note(
+                f"waiting for an operator at {self.broker.console_url} (aborts after {budget}s)", "warn"
+            )
+        else:
+            self.reporter.note(
+                f"no operator console is running, so nothing can answer this. Aborting in {budget}s; "
+                "re-run with --console to take over the live session instead.",
+                "warn",
+            )
         result = await self.broker.raise_intervention(intervention)
         trace.human_interventions += 1
         for act in result.human_actions:

@@ -16,8 +16,9 @@ from .agent.llm import build_client
 from .agent.loop import DiscoveryLoop, DiscoveryRequest, DiscoveryResult
 from .agent.reporter import ConsoleReporter, NullReporter
 from .artifact.compile import compile_capability
+from .artifact import profiles
 from .artifact.profiles import AppProfile
-from .artifact.schema import Capability
+from .artifact.schema import Capability, TenantOverlay as TenantOverlayT
 from .artifact.store import CapabilityStore
 from .config import Settings
 from .crystallize import lifecycle
@@ -26,9 +27,18 @@ from .escalation.console import build_app, serve
 from .evidence.recorder import EvidenceRecorder, new_run_id
 from .policy.allowlist import DeploymentPolicy, PolicyEngine
 from .policy.redact import Redactor
-from .replay.engine import ReplayEngine, ReplayOptions
+from .replay.engine import ReplayEngine, ReplayOptions, _credentials_for, missing_credentials_for
 from .replay.outcomes import ReplayResult
 from .surfaces.web import WebSurface
+
+
+class SetupFailed(RuntimeError):
+    """`--setup` could not establish the precondition.
+
+    Carried as its own type so the CLI can print it as an explanation. A
+    traceback here tells the reader about asyncio internals; what they need to
+    know is which capability failed and what to set.
+    """
 
 
 class Session:
@@ -71,7 +81,8 @@ class Session:
         self._console_server, self._console_task = await serve(
             app, port=self.settings.console_port
         )
-        return f"http://127.0.0.1:{self.settings.console_port}/"
+        self.broker.console_url = f"http://127.0.0.1:{self.settings.console_port}/"
+        return self.broker.console_url
 
     def profile(self, key: str | None) -> AppProfile | None:
         if not key:
@@ -94,6 +105,7 @@ async def run_discovery(
     capability_id: str,
     profile_key: str | None,
     setup_capability: str | None = None,
+    tenant: str | None = None,
     max_steps: int = 24,
     with_console: bool = False,
     llm_backend: str | None = None,
@@ -105,23 +117,48 @@ async def run_discovery(
             url = await session.start_console()
             print(f"[console] operator console at {url}")
 
+        # `--profile` used to default to "coreserv-7.2", which meant pointing the
+        # system at any other site and forgetting the flag silently applied a
+        # mock credit union's error vocabulary, interstitials, session-expiry
+        # detectors and irreversible-control patterns to a site they describe
+        # nothing about. The entry point already says which product this is.
         profile = session.profile(profile_key)
+        if profile is None and not profile_key:
+            profile = profiles.for_host(host_of(entrypoint), settings.profiles_dir)
+            if profile is not None:
+                print(f"[profile] {profile.app.key()} (matched on host)")
+            else:
+                print(f"[profile] none matches {host_of(entrypoint)} -- running without one. "
+                      f"`pcx profile new <key> --host {host_of(entrypoint)}` starts one.")
         deployment_policy = session.deployment
         if profile is not None:
             deployment_policy.irreversible_control_patterns = list(
                 dict.fromkeys(deployment_policy.irreversible_control_patterns + profile.irreversible_controls)
             )
 
+        # An explicit --tenant supplies the overlay; otherwise the run's own
+        # entry point says which deployment this is. Either way it is *this*
+        # host, never the default one.
+        overlay = session.store.load_tenant(tenant) if tenant else None
+        run_base_url = overlay.base_url if overlay else origin_of(entrypoint)
+
         # Establish preconditions deterministically, by replaying an existing
         # capability rather than teaching the model to log in every time.
         if setup_capability:
-            await _run_setup(session, setup_capability, settings)
+            await _run_setup(
+                session, setup_capability, settings, base_url=run_base_url, overlay=overlay
+            )
 
         llm = build_client(llm_backend or settings.llm_backend)
         loop = DiscoveryLoop(
             surface=session.surface,
             llm=llm,
-            policy=PolicyEngine(deployment_policy),
+            # Declaring a tenant declares that this run belongs to it, so the
+            # same cross-tenant pin the replay engine applies applies here. Left
+            # unpinned without --tenant, where discovery is exploratory.
+            policy=PolicyEngine(
+                deployment_policy, tenant_host=host_of(run_base_url) if overlay else None
+            ),
             recorder=session.recorder,
             redactor=session.redactor,
             broker=session.broker,
@@ -170,7 +207,7 @@ async def run_discovery(
                 result.trace,
                 capability_id=capability_id,
                 profile=profile,
-                base_url=settings.base_url,
+                base_url=run_base_url,
             )
             path = session.store.save(capability)
             _write_fixtures(session.store, capability, result.trace.parameters)
@@ -202,19 +239,23 @@ def load_fixture(store: CapabilityStore, capability_id: str, ref: str) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def bind_default_tenant(capability: Capability, settings: Settings) -> Capability:
-    """Point a capability at the default deployment when no overlay is supplied.
+def bind_default_tenant(
+    capability: Capability, settings: Settings, base_url: str | None = None
+) -> Capability:
+    """Point a capability at a deployment when no overlay is supplied.
 
     Artifacts store ``{{ tenant.base_url }}`` rather than a host, so an artifact
     is never bound to one institution by accident. Something has to supply the
-    binding at run time; with no ``--tenant`` that is the local deployment.
+    binding at run time; with no ``--tenant`` that is ``base_url``, defaulting to
+    the local deployment.
     """
     from .artifact.schema import TenantOverlay
 
+    resolved = base_url or settings.base_url
     capability.tenant = TenantOverlay(
         tenant_id="default",
-        base_url=settings.base_url,
-        label="local deployment",
+        base_url=resolved,
+        label="local deployment" if resolved == settings.base_url else host_of(resolved),
         notes="Implicit binding used when no --tenant was supplied.",
     )
     return capability
@@ -224,26 +265,71 @@ def host_of(url: str) -> str:
     return url.split("//", 1)[-1].split("/", 1)[0]
 
 
-async def _run_setup(session: Session, capability_id: str, settings: Settings) -> None:
-    capability = bind_default_tenant(session.store.load(capability_id), settings)
+def origin_of(url: str) -> str:
+    """Scheme and host, no path -- the base a `{{ tenant.base_url }}` resolves to."""
+    if "//" not in url:
+        return url
+    scheme, _, rest = url.partition("//")
+    return f"{scheme}//{rest.split('/', 1)[0]}"
+
+
+async def _run_setup(
+    session: Session,
+    capability_id: str,
+    settings: Settings,
+    *,
+    base_url: str | None = None,
+    overlay: "TenantOverlayT | None" = None,
+) -> None:
+    capability = session.store.load(capability_id)
+    if overlay is not None:
+        capability = capability.specialize(overlay)
+    else:
+        # A setup capability exists to prepare *this run's* surface, so it belongs
+        # on the host the run is about to use -- not on whatever the default
+        # deployment happens to be. Binding it to settings.base_url meant
+        # `--setup sign_on_parabank --entrypoint https://parabank...` signed on to
+        # localhost, and the only symptom was a connection refused to a port the
+        # user had no reason to expect in the command they typed.
+        capability = bind_default_tenant(capability, settings, base_url)
+    resolved_base = base_url or (overlay.base_url if overlay else settings.base_url)
     engine = ReplayEngine(
         session.surface,
         PolicyEngine(
             session.deployment,
             capability.policy,
-            tenant_host=host_of(capability.resolved_entrypoint(settings.base_url)),
+            tenant_host=host_of(capability.resolved_entrypoint(resolved_base)),
         ),
         session.recorder,
         session.redactor,
         broker=session.broker,
         options=ReplayOptions(),
-        capability_loader=session.store.load,
+        # A re-auth raised *inside* setup has to land on the same host, for the
+        # same reason the top-level replay binds its loader.
+        capability_loader=(
+            (lambda cid: session.store.load(cid).specialize(overlay))
+            if overlay is not None
+            else (lambda cid: bind_default_tenant(session.store.load(cid), settings, base_url))
+        ),
     )
-    creds = {k: v for k, v in settings.operator_credentials().items() if v}
-    result = await engine.run(capability, creds)
+    # The setup capability is whatever the caller named, so its inputs are
+    # resolved the same generic way the replay engine re-authenticates -- not from
+    # a hard-coded pair of CoreServ operator variables, which is what this used to
+    # do and which made `--setup` silently unusable for every other application.
+    missing = missing_credentials_for(capability)
+    if missing:
+        raise SetupFailed(
+            f"cannot run --setup {capability_id}: its credentials are not in the environment\n"
+            + "\n".join(missing)
+            + "\n\n.env is read automatically; an exported shell variable takes precedence."
+        )
+    result = await engine.run(capability, _credentials_for(capability))
     print(f"[setup] {capability.ref()} -> {result.caller_summary()}")
     if result.status != "success":
-        raise RuntimeError(f"setup capability failed: {result.caller_summary()}")
+        raise SetupFailed(
+            f"--setup {capability_id} did not complete: {result.caller_summary()}\n"
+            f"The run it was preparing for has not started. Evidence: {session.recorder.dir}"
+        )
 
 
 # --------------------------------------------------------------------------- #
@@ -294,29 +380,79 @@ async def run_replay(
             # refused outright rather than parking the run on a request nobody
             # will ever see. "Ask a human" is only a strategy when there is one.
             broker=session.broker if (with_console or escalate) else None,
+            # If a handoff is possible at all, the run has to be able to say it is
+            # waiting for one.
+            reporter=ConsoleReporter() if (with_console or escalate) else NullReporter(),
             options=ReplayOptions(approve_irreversible=approve_irreversible),
             capability_loader=loader,
         )
+        # A capability's own credentials are never in the artifact and should not
+        # have to be on the command line either -- that is where re-auth and
+        # `--setup` already get them from, and a password typed into a shell is a
+        # password in that shell's history. Anything the caller did not supply is
+        # filled in from the environment, by the same candidate variables.
+        inputs = _fill_from_environment(capability, dict(inputs))
         result = await engine.run(capability, inputs)
 
         if escalate and result.status == "failed":
             result = await engine.escalate_failure(capability, result)
 
         if record_evidence:
-            _record_and_maybe_demote(session, capability, result, inputs)
+            _record_and_apply_lifecycle(session, capability, result, inputs)
         return result
 
 
-def _record_and_maybe_demote(session: Session, capability: Capability, result: ReplayResult, inputs) -> None:
+def _fill_from_environment(capability: Capability, inputs: dict[str, Any]) -> dict[str, Any]:
+    """Supply any required input the caller omitted, from $PCX_<ID>_<NAME>.
+
+    Only fills what is missing, so an explicit ``--input`` always wins, and only
+    required inputs, so an optional parameter is not silently given a value
+    nobody asked for.
+    """
+    from .config import resolve_credential
+
+    for param in capability.contract.inputs:
+        if param.name in inputs or not param.required or param.default is not None:
+            continue
+        value, env_key = resolve_credential(capability.id, param.name)
+        if value is not None:
+            inputs[param.name] = value
+            shown = env_key if param.sensitivity in ("secret", "pii") else f"{env_key}={value}"
+            print(f"[input] {param.name} <- ${shown}")
+    return inputs
+
+
+def _record_and_apply_lifecycle(session: Session, capability: Capability, result: ReplayResult, inputs) -> None:
     action_sequence = "|".join(f"{s.action}:{s.id}" for s in result.steps)
     input_key = "|".join(f"{k}={_key_of(k, v, capability)}" for k, v in sorted(inputs.items()))
     lifecycle.record_run(
-        session.store, capability, result, action_sequence=action_sequence, input_key=input_key
+        session.store,
+        capability,
+        result,
+        action_sequence=action_sequence,
+        input_key=input_key,
+        # Was defaulted to 0 at every call site, which made the "human
+        # interventions must be 0" promotion gate vacuously true -- it read as a
+        # safety property and could never fire.
+        human_interventions=result.human_interventions,
     )
     stored = session.store.load(capability.id, capability.version)
     stored = lifecycle.refresh_evidence(session.store, stored)
 
+    # Promotion is the other half of the lifecycle and was manual-only: the
+    # breaker demoted automatically while nothing ever moved a capability the
+    # other way without someone typing `pcx promote`. The paper's whole claim is
+    # that a flow crystallizes as evidence accumulates, and the breaker is what
+    # makes doing it automatically safe -- being wrong is recoverable before a
+    # human notices. The T2 -> T1 gate still requires a human review flag, so
+    # this promotes as far as Type 2 on its own and no further.
     reason = lifecycle.should_demote(result)
+    if not reason and session.settings.auto_promote and stored.crystallization.status != "quarantined":
+        changed, message = lifecycle.promote(stored)
+        if changed:
+            session.store.update(stored)
+            print(f"[crystallize] {message}")
+
     if reason and stored.crystallization.status == "active":
         # The breaker exists to protect a capability that has been *promoted*.
         # A candidate that fails simply fails to accumulate evidence: the gates

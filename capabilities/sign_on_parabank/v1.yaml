@@ -1,0 +1,392 @@
+schema_version: pcx.capability/1.0
+id: sign_on_parabank
+version: 1
+title: Sign On Parabank
+description: Sign in to ParaBank with the supplied customer credentials. Stop once the Accounts Overview
+  page is displayed.
+created_at: '2026-09-10T20:03:07.797350+00:00'
+created_by_run: discovery-20260910T160233-0430
+discovered_with_model: claude-sonnet-4-5-20250929
+author: llm_discovery
+surface:
+  kind: web
+  adapter: pcx.surfaces.web:WebSurface
+  app:
+    vendor: Parasoft
+    product: ParaBank
+    version: '3.0'
+  entrypoint: '{{ tenant.base_url }}/parabank/index.htm'
+  viewport:
+  - 1280
+  - 800
+contract:
+  summary: Sign in to ParaBank with the supplied customer credentials. Stop once the Accounts Overview
+    page is displayed.
+  inputs:
+  - name: username
+    type: string
+    description: Username.
+    required: true
+    sensitivity: pii_reference
+  - name: password
+    type: string
+    description: Password.
+    required: true
+    sensitivity: secret
+  outputs:
+  - name: signed_in_customer
+    type: string
+    description: Signed In Customer.
+    required: true
+    sensitivity: internal
+  outcomes:
+  - code: OK
+    kind: success
+    description: The flow completed and every declared output was captured.
+    terminal: true
+    retryable: false
+    remediation: ''
+  - code: INVALID_CREDENTIALS
+    kind: denied
+    description: 'The username and password were not accepted. Distinct from a locked or absent account:
+      ParaBank does not distinguish those publicly.
+
+      '
+    detect:
+      any_of:
+      - text_present: The username and password could not be verified
+      - text_present: Please enter a username and password
+    terminal: true
+    retryable: false
+    remediation: Check the credentials. Do not retry -- repeated attempts will not succeed.
+  - code: ACCOUNT_NOT_FOUND
+    kind: business
+    description: 'The account number is well-formed but is not one of the signed-in customer''s accounts.
+      A legitimate answer to a lookup.
+
+      '
+    detect:
+      any_of:
+      - text_present: Could not find account
+      - text_present: The account does not exist
+    terminal: true
+    retryable: false
+    remediation: Confirm the account number belongs to this customer.
+  - code: VALIDATION_ERROR
+    kind: business
+    description: 'The form was rejected before any work was done -- a missing required field, a non-numeric
+      amount, or an amount the account cannot cover.
+
+      '
+    detect:
+      any_of:
+      - text_present: is required
+      - text_present: Please enter a valid amount
+      - text_present: The amount cannot be greater than
+      - text_present: Invalid amount
+    terminal: true
+    retryable: false
+    remediation: Correct the input and re-invoke. Retrying unchanged will not help.
+  - code: NO_TRANSACTIONS_FOUND
+    kind: business
+    description: 'A transaction search that ran correctly and matched nothing. Emphatically not an error
+      -- a caller that treats it as one will retry forever.
+
+      '
+    detect:
+      text_present: No transactions found
+    terminal: true
+    retryable: false
+    remediation: Widen the date range or amount, or accept the empty result.
+  side_effect: reversible_write
+  idempotent: false
+  typical_duration_ms: 30330
+steps:
+- id: s1
+  intent: I see the ParaBank login page with username and password fields. I need to enter the username
+    '{{ inputs.username }}' in the username field (e20).
+  action: type
+  target:
+    description: unlabelled textbox
+    strategies:
+    - kind: label
+      role: textbox
+      anchor_text: Username
+      direction: below
+      max_distance: 420.0
+      region: index.htm
+      note: The control immediately below of the label 'Username'. This product does not associate labels
+        with inputs, so adjacency is the only semantic link available -- and it is the same link a human
+        uses.
+    - kind: ordinal
+      role: textbox
+      region: index.htm
+      index: 0
+      note: Positional fallback. If this is the strategy that fires, the screen has changed and the capability
+        should be reviewed.
+    verify:
+      role: textbox
+      editable: true
+      enabled: true
+      min_confidence: 0.45
+    on_ambiguity: fail
+    recorded:
+      role: textbox
+      name: ''
+      region: index.htm
+      rect:
+        x: 295.8000183105469
+        y: 306.3999938964844
+        w: 140.0
+        h: 13.600006103515625
+  value: '{{ inputs.username }}'
+  parse: raw
+  expect_navigation: false
+  signature_hint: sig_db11b249ee691ee0
+  risk: safe
+  optional: false
+  retry:
+    attempts: 2
+    backoff_ms: 750
+    settle_ms: 300
+  timeout_ms: 15000
+- id: s2
+  intent: Username is already filled with '{{ inputs.username }}'. Now I need to enter the password '{{
+    inputs.password }}' in the password field (e28).
+  action: type
+  target:
+    description: unlabelled textbox
+    strategies:
+    - kind: label
+      role: textbox
+      anchor_text: Password
+      direction: below
+      max_distance: 420.0
+      region: index.htm
+      note: The control immediately below of the label 'Password'. This product does not associate labels
+        with inputs, so adjacency is the only semantic link available -- and it is the same link a human
+        uses.
+    - kind: ordinal
+      role: textbox
+      region: index.htm
+      index: 1
+      note: Positional fallback. If this is the strategy that fires, the screen has changed and the capability
+        should be reviewed.
+    verify:
+      role: textbox
+      editable: true
+      enabled: true
+      min_confidence: 0.45
+    on_ambiguity: fail
+    recorded:
+      role: textbox
+      name: ''
+      region: index.htm
+      rect:
+        x: 295.8000183105469
+        y: 354.3999938964844
+        w: 140.0
+        h: 13.600006103515625
+  value: '{{ inputs.password }}'
+  parse: raw
+  expect_navigation: false
+  signature_hint: sig_db11b249ee691ee0
+  risk: safe
+  optional: false
+  retry:
+    attempts: 2
+    backoff_ms: 750
+    settle_ms: 300
+  timeout_ms: 15000
+- id: s3
+  intent: Username and password have been entered; I can see the 'Log In' button (e30) on screen, so I
+    should click it to proceed with login.
+  action: click
+  target:
+    description: button 'Log In'
+    strategies:
+    - kind: role_name
+      role: button
+      name: Log In
+      note: Accessible name -- the most portable identity available.
+    - kind: label
+      role: button
+      anchor_text: Password
+      direction: below
+      max_distance: 420.0
+      region: index.htm
+      note: The control immediately below of the label 'Password'. This product does not associate labels
+        with inputs, so adjacency is the only semantic link available -- and it is the same link a human
+        uses.
+    - kind: text
+      role: button
+      text: Log In
+      note: Visible label text.
+    - kind: ordinal
+      role: button
+      region: index.htm
+      index: 0
+      note: Positional fallback. If this is the strategy that fires, the screen has changed and the capability
+        should be reviewed.
+    verify:
+      role: button
+      name_pattern: Log\ In
+      enabled: true
+      min_confidence: 0.45
+    on_ambiguity: fail
+    recorded:
+      role: button
+      name: Log In
+      region: index.htm
+      rect:
+        x: 308.8000183105469
+        y: 382.5249938964844
+        w: 34.449981689453125
+        h: 16.4000244140625
+  parse: raw
+  expect:
+    route_matches: ^/parabank/overview\.htm$
+  expect_navigation: true
+  signature_hint: sig_4d07e1fca93e7dce
+  risk: reversible
+  optional: false
+  retry:
+    attempts: 2
+    backoff_ms: 750
+    settle_ms: 300
+  timeout_ms: 15000
+- id: s4
+  intent: I can see the Accounts Overview page is displayed after successful sign-in. The customer name
+    '<signed_in_customer>' is shown in the welcome message. I need to extract this as the signed_in_customer
+    output.
+  action: extract
+  target:
+    description: text located by ordinal
+    strategies:
+    - kind: ordinal
+      role: text
+      region: overview.htm
+      index: 6
+      note: Positional fallback. If this is the strategy that fires, the screen has changed and the capability
+        should be reviewed.
+    verify:
+      role: text
+      enabled: true
+      min_confidence: 0.45
+    on_ambiguity: fail
+    recorded:
+      role: text
+      region: overview.htm
+      rect:
+        x: 336.7250061035156
+        y: 254.1999969482422
+        w: 40.79998779296875
+        h: 11.199996948242188
+      rejected_strategies:
+      - 'label: verified'
+  bind: signed_in_customer
+  parse: raw
+  expect_navigation: false
+  signature_hint: sig_4d07e1fca93e7dce
+  risk: safe
+  optional: false
+  retry:
+    attempts: 2
+    backoff_ms: 750
+    settle_ms: 300
+  timeout_ms: 15000
+checkpoint:
+  id: final
+  description: On ^/parabank/overview\.htm$ with every declared output visible.
+  condition:
+    all_of:
+    - route_matches: ^/parabank/overview\.htm$
+    - element_present:
+        description: text located by ordinal
+        strategies:
+        - kind: ordinal
+          role: text
+          region: overview.htm
+          index: 6
+          note: Positional fallback. If this is the strategy that fires, the screen has changed and the
+            capability should be reviewed.
+        verify:
+          role: text
+          enabled: true
+          min_confidence: 0.45
+        on_ambiguity: fail
+        recorded:
+          role: text
+          region: overview.htm
+          rect:
+            x: 336.7250061035156
+            y: 254.1999969482422
+            w: 40.79998779296875
+            h: 11.199996948242188
+          rejected_strategies:
+          - 'label: verified'
+  signature_hint: sig_4d07e1fca93e7dce
+recovery:
+  transient:
+  - name: slow_public_host
+    when:
+      any_of:
+      - text_present: Please wait
+      - text_present: 503 Service
+      - text_present: Service Temporarily Unavailable
+    max_occurrences: 4
+    note: 'ParaBank is a shared public instance and is periodically slow or briefly unavailable while
+      its demo database is reset. Waiting is correct; re- submitting a transfer or a bill payment is not,
+      because a re-submit on a write flow double-posts.
+
+      '
+  hard_error:
+    any_of:
+    - text_present: An internal error has occurred
+    - text_present: HTTP Status 500
+    - text_present: Exception Report
+policy:
+  allowed_routes:
+  - ^/parabank/index\.htm$
+  - ^/parabank/overview\.htm$
+  allowed_actions:
+  - click
+  - extract
+  - type
+  max_steps: 12
+  timeout_ms: 90990
+  irreversible_requires_approval: true
+  redact_patterns:
+  - SSN\s*:?\s*[0-9-]+
+  - Account\s*#?\s*[0-9]{5,}
+crystallization:
+  execution_type: 3
+  status: candidate
+  gates:
+    t3_to_t2_min_runs: 3
+    t3_to_t2_min_sequence_stability: 0.9
+    t2_to_t1_min_runs: 5
+    t2_to_t1_min_resolution_stability: 0.99
+    max_safety_violations: 0
+    require_acceptance_tests: true
+    require_human_review_for_t1: true
+  evidence:
+    successful_runs: 0
+    failed_runs: 0
+    distinct_input_sets: 0
+    safety_violations: 0
+    human_interventions: 0
+    action_sequence_stability: 0.0
+    resolution_stability: 0.0
+    degraded_resolutions: 0
+    drift_signals: 0
+    successful_runs_since_demotion: 0
+    failed_runs_since_demotion: 0
+    human_reviewed: false
+  acceptance_tests:
+  - name: recorded_happy_path
+    inputs_ref: recorded_happy_path
+    expect_outcome: OK
+    expect_outputs_present:
+    - signed_in_customer
+_digest: sha256:9f31fe37025372fccc9083e15b77a0ff

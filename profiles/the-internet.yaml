@@ -1,0 +1,97 @@
+# Application profile: "The Internet" (Elemental Selenium) — the fallback live target.
+#
+# https://the-internet.herokuapp.com — a set of pages built expressly for
+# practising web automation. It is here as the *reliable* live target: no
+# registration, fixed credentials printed on the page, no shared state to
+# pollute, and it has been stable for years. Use it when ParaBank is slow, being
+# reset, or you simply want a live run that cannot fail for environmental
+# reasons.
+#
+# It is less domain-credible than ParaBank -- it is a grab-bag of test pages, not
+# a bank -- but three of those pages are unusually good analogues for the real
+# estate this project targets:
+#
+#   /nested_frames    frames inside frames, which is the CoreServ frameset case
+#   /tables           two data tables with no test ids, addressed by row x column
+#   /dynamic_loading  content that appears after a delay, exercising `settle`
+#   /status_codes     a deliberate 500, exercising the hard-error path
+#
+# Credentials for /login are published on the page itself:
+#   tomsmith / SuperSecretPassword!
+
+# Which hosts serve this product. A run finds its profile from its entry point,
+# so --profile is an override rather than something to remember.
+hosts:
+  - "the-internet.herokuapp.com"
+
+app:
+  vendor: "Elemental Selenium"
+  product: "The Internet"
+  version: "current"
+
+description: >
+  Sinatra application, server-rendered, semantic markup. Conditions are reported
+  as a flash banner at the top of the page (div#flash) whose text begins with a
+  short phrase and ends with a close button.
+
+outcomes:
+  - code: INVALID_CREDENTIALS
+    kind: denied
+    description: >
+      The username or password was rejected. The application distinguishes the
+      two, which is unusual and worth preserving in the message.
+    detect:
+      any_of:
+        - text_present: "Your username is invalid!"
+        - text_present: "Your password is invalid!"
+    terminal: true
+    retryable: false
+    remediation: "Use tomsmith / SuperSecretPassword! as printed on the login page."
+
+  - code: NOT_AUTHENTICATED
+    kind: denied
+    description: "A protected page was requested without a session."
+    detect:
+      text_present: "You must login to view the secure area!"
+    terminal: true
+    retryable: false
+    remediation: "Sign on first; the sign_on_the_internet capability does this."
+
+transient:
+  - name: slow_resource
+    note: >
+      /dynamic_loading and /slow render their content only after a delay. The
+      correct response is to wait and re-observe; the `settle` in-flight request
+      counter usually handles it before this rule is reached.
+    when:
+      any_of:
+        - text_present: "Loading..."
+        - text_present: "Please wait"
+    max_occurrences: 4
+    dismiss: []
+
+session_expired:
+  all_of:
+    - text_present: "Login Page"
+    - text_absent: "Logout"
+
+reauth_capability: sign_on_the_internet
+
+hard_error:
+  any_of:
+    - text_present: "Internal Server Error"
+    - text_present: "HTTP Status 500"
+
+# This site has nothing destructive on it, but the classifier should still be
+# given the vocabulary -- an empty list would silently mean "nothing is risky".
+irreversible_controls:
+  - "\\bDELETE\\b"
+  - "\\bREMOVE\\b"
+
+volatile_text:
+  - "^Powered by"
+  - "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+  - "Elemental Selenium"
+  - "Fork me on GitHub"
+
+redact_patterns: []

@@ -1,0 +1,332 @@
+schema_version: pcx.capability/1.0
+id: read_parabank_account_balance
+version: 1
+title: Read Parabank Account Balance
+description: From the Accounts Overview page, read back the account number and the current balance of
+  the first listed account.
+created_at: '2026-09-10T20:26:00.762098+00:00'
+created_by_run: discovery-20260910T162536-642f
+discovered_with_model: claude-sonnet-4-5-20250929
+author: llm_discovery
+surface:
+  kind: web
+  adapter: pcx.surfaces.web:WebSurface
+  app:
+    vendor: Parasoft
+    product: ParaBank
+    version: '3.0'
+  entrypoint: '{{ tenant.base_url }}/parabank/overview.htm'
+  viewport:
+  - 1280
+  - 800
+contract:
+  summary: From the Accounts Overview page, read back the account number and the current balance of the
+    first listed account.
+  outputs:
+  - name: account_number
+    type: string
+    description: Account Number.
+    required: true
+    sensitivity: internal
+  - name: balance
+    type: money
+    description: Balance.
+    required: true
+    sensitivity: internal
+  outcomes:
+  - code: OK
+    kind: success
+    description: The flow completed and every declared output was captured.
+    terminal: true
+    retryable: false
+    remediation: ''
+  - code: INVALID_CREDENTIALS
+    kind: denied
+    description: 'The username and password were not accepted. Distinct from a locked or absent account:
+      ParaBank does not distinguish those publicly.
+
+      '
+    detect:
+      any_of:
+      - text_present: The username and password could not be verified
+      - text_present: Please enter a username and password
+    terminal: true
+    retryable: false
+    remediation: Check the credentials. Do not retry -- repeated attempts will not succeed.
+  - code: ACCOUNT_NOT_FOUND
+    kind: business
+    description: 'The account number is well-formed but is not one of the signed-in customer''s accounts.
+      A legitimate answer to a lookup.
+
+      '
+    detect:
+      any_of:
+      - text_present: Could not find account
+      - text_present: The account does not exist
+    terminal: true
+    retryable: false
+    remediation: Confirm the account number belongs to this customer.
+  - code: VALIDATION_ERROR
+    kind: business
+    description: 'The form was rejected before any work was done -- a missing required field, a non-numeric
+      amount, or an amount the account cannot cover.
+
+      '
+    detect:
+      any_of:
+      - text_present: is required
+      - text_present: Please enter a valid amount
+      - text_present: The amount cannot be greater than
+      - text_present: Invalid amount
+    terminal: true
+    retryable: false
+    remediation: Correct the input and re-invoke. Retrying unchanged will not help.
+  - code: NO_TRANSACTIONS_FOUND
+    kind: business
+    description: 'A transaction search that ran correctly and matched nothing. Emphatically not an error
+      -- a caller that treats it as one will retry forever.
+
+      '
+    detect:
+      text_present: No transactions found
+    terminal: true
+    retryable: false
+    remediation: Widen the date range or amount, or accept the empty result.
+  side_effect: read_only
+  idempotent: true
+  typical_duration_ms: 13560
+steps:
+- id: s1
+  intent: I can see the Accounts Overview page with account <account_number> showing a balance of <balance>.
+    I need to extract the account number from e25 and the balance from e27.
+  action: extract
+  target:
+    description: cell located by label from 'Account'
+    strategies:
+    - kind: label
+      role: cell
+      anchor_text: Account
+      direction: below
+      max_distance: 420.0
+      region: overview.htm
+      note: The control immediately below of the label 'Account'. This product does not associate labels
+        with inputs, so adjacency is the only semantic link available -- and it is the same link a human
+        uses.
+    - kind: ordinal
+      role: cell
+      region: overview.htm
+      index: 3
+      note: Positional fallback. If this is the strategy that fires, the screen has changed and the capability
+        should be reviewed.
+    verify:
+      role: cell
+      enabled: true
+      min_confidence: 0.45
+    on_ambiguity: fail
+    recorded:
+      role: cell
+      region: overview.htm
+      rect:
+        x: 491.8000183105469
+        y: 347.3999938964844
+        w: 110.49996948242188
+        h: 19.0
+  bind: account_number
+  parse: raw
+  expect_navigation: false
+  signature_hint: sig_4d07e1fca93e7dce
+  risk: safe
+  optional: false
+  retry:
+    attempts: 2
+    backoff_ms: 750
+    settle_ms: 300
+  timeout_ms: 15000
+- id: s2
+  intent: I can see the Accounts Overview table with account <account_number> and balance <balance>. I
+    already extracted the account_number in step 1, now I need to extract the balance from cell e27 which
+    shows '<balance>'.
+  action: extract
+  target:
+    description: cell located by label from 'Balance*'
+    strategies:
+    - kind: label
+      role: cell
+      anchor_text: Balance*
+      direction: below
+      max_distance: 420.0
+      region: overview.htm
+      note: The control immediately below of the label 'Balance*'. This product does not associate labels
+        with inputs, so adjacency is the only semantic link available -- and it is the same link a human
+        uses.
+    - kind: ordinal
+      role: cell
+      region: overview.htm
+      index: 4
+      note: Positional fallback. If this is the strategy that fires, the screen has changed and the capability
+        should be reviewed.
+    verify:
+      role: cell
+      text_pattern: ^-?\(?\$?[0-9][0-9,]*\.[0-9]{2}\)?$
+      enabled: true
+      min_confidence: 0.45
+    on_ambiguity: fail
+    recorded:
+      role: cell
+      region: overview.htm
+      rect:
+        x: 610.2999877929688
+        y: 347.3999938964844
+        w: 115.612548828125
+        h: 19.0
+  bind: balance
+  parse: money
+  expect_navigation: false
+  signature_hint: sig_4d07e1fca93e7dce
+  risk: safe
+  optional: false
+  retry:
+    attempts: 2
+    backoff_ms: 750
+    settle_ms: 300
+  timeout_ms: 15000
+checkpoint:
+  id: final
+  description: On ^/parabank/overview\.htm$ with every declared output visible.
+  condition:
+    all_of:
+    - route_matches: ^/parabank/overview\.htm$
+    - element_present:
+        description: cell located by label from 'Account'
+        strategies:
+        - kind: label
+          role: cell
+          anchor_text: Account
+          direction: below
+          max_distance: 420.0
+          region: overview.htm
+          note: The control immediately below of the label 'Account'. This product does not associate
+            labels with inputs, so adjacency is the only semantic link available -- and it is the same
+            link a human uses.
+        - kind: ordinal
+          role: cell
+          region: overview.htm
+          index: 3
+          note: Positional fallback. If this is the strategy that fires, the screen has changed and the
+            capability should be reviewed.
+        verify:
+          role: cell
+          enabled: true
+          min_confidence: 0.45
+        on_ambiguity: fail
+        recorded:
+          role: cell
+          region: overview.htm
+          rect:
+            x: 491.8000183105469
+            y: 347.3999938964844
+            w: 110.49996948242188
+            h: 19.0
+    - element_present:
+        description: cell located by label from 'Balance*'
+        strategies:
+        - kind: label
+          role: cell
+          anchor_text: Balance*
+          direction: below
+          max_distance: 420.0
+          region: overview.htm
+          note: The control immediately below of the label 'Balance*'. This product does not associate
+            labels with inputs, so adjacency is the only semantic link available -- and it is the same
+            link a human uses.
+        - kind: ordinal
+          role: cell
+          region: overview.htm
+          index: 4
+          note: Positional fallback. If this is the strategy that fires, the screen has changed and the
+            capability should be reviewed.
+        verify:
+          role: cell
+          text_pattern: ^-?\(?\$?[0-9][0-9,]*\.[0-9]{2}\)?$
+          enabled: true
+          min_confidence: 0.45
+        on_ambiguity: fail
+        recorded:
+          role: cell
+          region: overview.htm
+          rect:
+            x: 610.2999877929688
+            y: 347.3999938964844
+            w: 115.612548828125
+            h: 19.0
+  signature_hint: sig_4d07e1fca93e7dce
+recovery:
+  transient:
+  - name: slow_public_host
+    when:
+      any_of:
+      - text_present: Please wait
+      - text_present: 503 Service
+      - text_present: Service Temporarily Unavailable
+    max_occurrences: 4
+    note: 'ParaBank is a shared public instance and is periodically slow or briefly unavailable while
+      its demo database is reset. Waiting is correct; re- submitting a transfer or a bill payment is not,
+      because a re-submit on a write flow double-posts.
+
+      '
+  session_expired:
+    all_of:
+    - text_present: Customer Login
+    - text_absent: Log Out
+  reauth_capability: sign_on_parabank
+  hard_error:
+    any_of:
+    - text_present: An internal error has occurred
+    - text_present: HTTP Status 500
+    - text_present: Exception Report
+policy:
+  allowed_routes:
+  - ^/parabank/overview\.htm$
+  allowed_actions:
+  - extract
+  max_steps: 10
+  timeout_ms: 60000
+  irreversible_requires_approval: true
+  redact_patterns:
+  - SSN\s*:?\s*[0-9-]+
+  - Account\s*#?\s*[0-9]{5,}
+crystallization:
+  execution_type: 3
+  status: candidate
+  gates:
+    t3_to_t2_min_runs: 3
+    t3_to_t2_min_sequence_stability: 0.9
+    t2_to_t1_min_runs: 5
+    t2_to_t1_min_resolution_stability: 0.99
+    max_safety_violations: 0
+    require_acceptance_tests: true
+    require_human_review_for_t1: true
+  evidence:
+    successful_runs: 2
+    failed_runs: 0
+    distinct_input_sets: 1
+    safety_violations: 0
+    human_interventions: 0
+    action_sequence_stability: 1.0
+    resolution_stability: 1.0
+    degraded_resolutions: 0
+    drift_signals: 3
+    tenants_seen:
+    - parabank
+    successful_runs_since_demotion: 0
+    failed_runs_since_demotion: 0
+    human_reviewed: false
+  acceptance_tests:
+  - name: recorded_happy_path
+    expect_outcome: OK
+    expect_outputs_present:
+    - account_number
+    - balance
+    expect_output_matches:
+      balance: ^-?\(?\$?[0-9][0-9,]*\.[0-9]{2}\)?$
+_digest: sha256:1fd23ab2eafe3620475a1ca8a86b0266

@@ -233,7 +233,11 @@ def test_tenant_overlay_rebinds_without_mutating_the_base():
     specialized = base.specialize(overlay)
     assert specialized.resolved_entrypoint() == "https://cu2.example.com/desk"
     assert base.surface.entrypoint == "{{ tenant.base_url }}/desk", "base artifact must not be mutated"
-    assert specialized.steps[0].timeout_ms == base.steps[0].timeout_ms * 2
+    # The overlay no longer rewrites the step's recorded timeout. It used to, and
+    # that put the timing multiplier inside the digest -- see
+    # test_a_timing_multiplier_does_not_change_the_digest for why that was wrong.
+    # The multiplier is applied to the wait the engine actually performs.
+    assert specialized.steps[0].timeout_ms == base.steps[0].timeout_ms
 
 
 def test_binding_a_tenant_does_not_change_the_artifact_identity():
@@ -393,3 +397,397 @@ def test_missing_dotenv_is_not_an_error(tmp_path):
     from pcx.config import load_dotenv
 
     assert load_dotenv(tmp_path / "nope.env") == []
+
+
+# --------------------------------------------------------------------------- #
+# Resolving a discovery run's inputs
+#
+# The failure this guards against is specific and was hit for real: a credential
+# interpolated by the shell (`--param password="$VAR"`) is empty when the variable
+# is unset, and it is *always* unset for a value that lives in .env, because .env
+# is read by this process and not by the shell. The old code passed the empty
+# string through, launched a browser and spent a model call before the agent
+# reported it could not sign in.
+# --------------------------------------------------------------------------- #
+
+
+def test_a_literal_parameter_is_taken_as_given():
+    from pcx.cli import _resolve_parameters
+
+    assert _resolve_parameters(["member_number=10000001"], None) == {"member_number": "10000001"}
+
+
+def test_an_empty_parameter_is_refused_before_anything_is_launched():
+    from pcx.cli import _resolve_parameters
+
+    with pytest.raises(SystemExit) as excinfo:
+        _resolve_parameters(["password="], None)
+    message = str(excinfo.value)
+    assert "empty string" in message
+    assert "--secret password=" in message  # the message must name the fix
+
+
+def test_a_bare_parameter_resolves_from_the_conventional_variable(monkeypatch):
+    """`--param username` means "the value is $PCX_USERNAME" -- the same
+    convention the replay engine already uses to re-authenticate."""
+    from pcx.cli import _resolve_parameters
+
+    monkeypatch.setenv("PCX_USERNAME", "tomsmith")
+    assert _resolve_parameters(["username"], None) == {"username": "tomsmith"}
+
+
+def test_a_bare_parameter_with_no_variable_names_the_variable_it_wanted(monkeypatch):
+    from pcx.cli import _resolve_parameters
+
+    monkeypatch.delenv("PCX_USERNAME", raising=False)
+    with pytest.raises(SystemExit) as excinfo:
+        _resolve_parameters(["username"], None)
+    assert "$PCX_USERNAME" in str(excinfo.value)
+
+
+def test_a_secret_is_passed_by_the_name_of_a_variable_not_by_value(monkeypatch):
+    from pcx.cli import _resolve_parameters
+
+    monkeypatch.setenv("PCX_PARABANK_PASSWORD", "s3cret")
+    assert _resolve_parameters(None, ["password=PCX_PARABANK_PASSWORD"]) == {"password": "s3cret"}
+
+
+def test_a_secret_without_a_variable_name_is_refused():
+    """`--secret password` is a plausible typo for `--param password`, and
+    silently accepting it would be the one case where a secret *does* end up on
+    the command line."""
+    from pcx.cli import _resolve_parameters
+
+    with pytest.raises(SystemExit) as excinfo:
+        _resolve_parameters(None, ["password"])
+    assert "not the secret" in str(excinfo.value)
+
+
+def test_an_unset_secret_variable_is_reported_by_name(monkeypatch):
+    from pcx.cli import _resolve_parameters
+
+    monkeypatch.delenv("PCX_PARABANK_PASSWORD", raising=False)
+    with pytest.raises(SystemExit) as excinfo:
+        _resolve_parameters(None, ["password=PCX_PARABANK_PASSWORD"])
+    assert "$PCX_PARABANK_PASSWORD" in str(excinfo.value)
+
+
+def test_every_missing_input_is_reported_at_once(monkeypatch):
+    """Reporting one at a time turns a two-variable mistake into two round trips
+    through a browser launch."""
+    from pcx.cli import _resolve_parameters
+
+    monkeypatch.delenv("PCX_PARABANK_USER", raising=False)
+    monkeypatch.delenv("PCX_PARABANK_PASSWORD", raising=False)
+    with pytest.raises(SystemExit) as excinfo:
+        _resolve_parameters(
+            ["last_name=Conway"],
+            ["username=PCX_PARABANK_USER", "password=PCX_PARABANK_PASSWORD"],
+        )
+    message = str(excinfo.value)
+    assert "PCX_PARABANK_USER" in message and "PCX_PARABANK_PASSWORD" in message
+
+
+# --------------------------------------------------------------------------- #
+# Where a capability's credentials come from at run time
+#
+# `--setup sign_on_x` used to resolve its inputs from two hard-coded CoreServ
+# variables, so it worked for exactly one application and failed INVALID_INPUT
+# for every other -- after driving a browser to the sign-on screen.
+# --------------------------------------------------------------------------- #
+
+
+def _sign_on(capability_id: str = "sign_on_parabank") -> Capability:
+    return make_capability(
+        id=capability_id,
+        contract=Contract(
+            summary="sign on",
+            inputs=[
+                Param(name="username", sensitivity="pii_reference"),
+                Param(name="password", sensitivity="secret"),
+            ],
+            outputs=[Param(name="signed_in_customer")],
+            outcomes=[Outcome(code="OK", kind="success")],
+        ),
+    )
+
+
+def test_a_credential_is_looked_up_scoped_before_generic():
+    from pcx.config import credential_env_candidates
+
+    assert credential_env_candidates("sign_on_parabank", "username") == [
+        "PCX_SIGN_ON_PARABANK_USERNAME",
+        "PCX_USERNAME",
+    ]
+
+
+def test_two_sign_ons_do_not_share_one_credential(monkeypatch):
+    """The reason the scoped name exists: two institutions both have a
+    `username`, and the generic variable would hand one site's credential to the
+    other without anything looking wrong."""
+    from pcx.replay.engine import _credentials_for
+
+    monkeypatch.setenv("PCX_SIGN_ON_PARABANK_USERNAME", "parabank_user")
+    monkeypatch.setenv("PCX_SIGN_ON_THE_INTERNET_USERNAME", "tomsmith")
+    monkeypatch.delenv("PCX_USERNAME", raising=False)
+
+    assert _credentials_for(_sign_on("sign_on_parabank"))["username"] == "parabank_user"
+    assert _credentials_for(_sign_on("sign_on_the_internet"))["username"] == "tomsmith"
+
+
+def test_the_generic_name_still_works_when_nothing_is_scoped(monkeypatch):
+    """`PCX_OPERATOR_ID` has to keep working for sign_on_coreserv."""
+    from pcx.replay.engine import _credentials_for
+
+    monkeypatch.delenv("PCX_SIGN_ON_PARABANK_USERNAME", raising=False)
+    monkeypatch.setenv("PCX_USERNAME", "shared_identity")
+
+    assert _credentials_for(_sign_on())["username"] == "shared_identity"
+
+
+def test_a_scoped_name_beats_the_generic_one(monkeypatch):
+    from pcx.replay.engine import _credentials_for
+
+    monkeypatch.setenv("PCX_SIGN_ON_PARABANK_USERNAME", "specific")
+    monkeypatch.setenv("PCX_USERNAME", "generic")
+
+    assert _credentials_for(_sign_on())["username"] == "specific"
+
+
+def test_missing_credentials_are_named_as_variables_not_as_inputs(monkeypatch):
+    """"input 'username' is required" tells the reader nothing they can act on.
+    The names of the variables that would have worked do."""
+    from pcx.replay.engine import missing_credentials_for
+
+    for name in ("PCX_SIGN_ON_PARABANK_USERNAME", "PCX_USERNAME",
+                 "PCX_SIGN_ON_PARABANK_PASSWORD", "PCX_PASSWORD"):
+        monkeypatch.delenv(name, raising=False)
+
+    report = "\n".join(missing_credentials_for(_sign_on()))
+    assert "$PCX_SIGN_ON_PARABANK_USERNAME" in report
+    assert "$PCX_SIGN_ON_PARABANK_PASSWORD" in report
+    assert "$PCX_USERNAME" in report  # the fallback is offered too
+
+
+def test_nothing_is_missing_once_the_variables_are_set(monkeypatch):
+    from pcx.replay.engine import missing_credentials_for
+
+    monkeypatch.setenv("PCX_SIGN_ON_PARABANK_USERNAME", "u")
+    monkeypatch.setenv("PCX_SIGN_ON_PARABANK_PASSWORD", "p")
+    assert missing_credentials_for(_sign_on()) == []
+
+
+def test_the_short_param_form_uses_the_same_lookup_as_replay(monkeypatch):
+    """A capability recorded with `--param username` must be replayable from the
+    same variable. Two conventions would mean discovery and replay disagree about
+    where a credential lives."""
+    from pcx.cli import _resolve_parameters
+
+    monkeypatch.setenv("PCX_SIGN_ON_PARABANK_USERNAME", "parabank_user")
+    monkeypatch.delenv("PCX_USERNAME", raising=False)
+
+    assert _resolve_parameters(["username"], None, capability_id="sign_on_parabank") == {
+        "username": "parabank_user"
+    }
+
+
+# --------------------------------------------------------------------------- #
+# Which host a `--setup` capability runs against
+#
+# A setup capability prepares the surface the discovery run is about to use, so
+# it belongs on that run's host. Binding it to the default deployment meant
+# `--setup sign_on_parabank --entrypoint https://parabank.parasoft.com/...`
+# navigated to http://127.0.0.1:8799, and the only symptom was a connection
+# refused to a port that appears nowhere in the command.
+# --------------------------------------------------------------------------- #
+
+
+def test_origin_keeps_scheme_and_host_and_drops_the_path():
+    from pcx.runner import origin_of
+
+    assert origin_of("https://parabank.parasoft.com/parabank/overview.htm") == "https://parabank.parasoft.com"
+    assert origin_of("http://127.0.0.1:8799/desk") == "http://127.0.0.1:8799"
+
+
+def test_setup_binds_to_the_runs_host_not_the_default_deployment():
+    from pcx.config import Settings
+    from pcx.runner import bind_default_tenant, origin_of
+
+    capability = make_capability(
+        id="sign_on_parabank",
+        surface=SurfaceBinding(entrypoint="{{ tenant.base_url }}/parabank/index.htm"),
+    )
+    entrypoint = "https://parabank.parasoft.com/parabank/overview.htm"
+    bound = bind_default_tenant(capability, Settings(), origin_of(entrypoint))
+
+    assert bound.resolved_entrypoint() == "https://parabank.parasoft.com/parabank/index.htm"
+
+
+def test_setup_still_falls_back_to_the_default_deployment():
+    """With a localhost entry point the behaviour is unchanged."""
+    from pcx.config import Settings
+    from pcx.runner import bind_default_tenant
+
+    settings = Settings()
+    bound = bind_default_tenant(make_capability(), settings)
+    assert bound.resolved_entrypoint().startswith(settings.base_url)
+
+
+def test_a_tenant_overlay_supplies_the_host_without_changing_the_artifact():
+    capability = make_capability(
+        surface=SurfaceBinding(entrypoint="{{ tenant.base_url }}/parabank/index.htm"),
+    )
+    bound = capability.specialize(
+        TenantOverlay(tenant_id="parabank", base_url="https://parabank.parasoft.com",
+                      timing_multiplier=2.5)
+    )
+    assert bound.resolved_entrypoint() == "https://parabank.parasoft.com/parabank/index.htm"
+    assert bound.digest() == capability.digest()  # binding is not a change to the flow
+
+
+def test_a_timing_multiplier_does_not_change_the_digest():
+    """It used to. step.timeout_ms is inside the digest, so scaling it made a
+    tenant that merely needs longer waits look like a different capability --
+    and since the replay engine stamps each ledger row with the *specialized*
+    digest while the lifecycle queries the base one, every run against such a
+    tenant was written somewhere the promotion gates never look. The
+    multi-tenant claim is one artifact and one track record across tenants; a
+    latency budget must not split it."""
+    capability = make_capability()
+    slow = capability.specialize(
+        TenantOverlay(tenant_id="parabank", base_url="https://parabank.parasoft.com",
+                      timing_multiplier=2.5)
+    )
+    fast = capability.specialize(
+        TenantOverlay(tenant_id="local", base_url="http://127.0.0.1:8799", timing_multiplier=1.0)
+    )
+    assert slow.digest() == fast.digest() == capability.digest()
+    assert slow.steps[0].timeout_ms == capability.steps[0].timeout_ms
+
+
+def test_the_engine_scales_the_wait_it_actually_uses():
+    """The budget still has to grow -- it is applied at run time instead."""
+    from pcx.replay.engine import ReplayEngine
+
+    engine = ReplayEngine.__new__(ReplayEngine)
+    engine._timing = 2.5
+    assert engine._budget(15000) == 37500
+
+    engine._timing = 1.0
+    assert engine._budget(15000) == 15000
+
+
+# --------------------------------------------------------------------------- #
+# Finding a profile from the run's own entry point
+#
+# `--profile` defaulted to "coreserv-7.2". Pointing the system at any other site
+# and forgetting the flag silently applied a mock credit union's error
+# vocabulary, interstitials, session-expiry detectors and irreversible-control
+# patterns to a site they describe nothing about -- and a profile that describes
+# the wrong application is worse than no profile, because replay believes it.
+# --------------------------------------------------------------------------- #
+
+
+def _profiles(tmp_path, **by_name):
+    import yaml
+
+    for name, data in by_name.items():
+        (tmp_path / f"{name}.yaml").write_text(yaml.safe_dump(data), encoding="utf-8")
+    return tmp_path
+
+
+def test_a_profile_is_found_by_the_host_it_claims(tmp_path):
+    from pcx.artifact.profiles import for_host
+
+    _profiles(
+        tmp_path,
+        bank={"hosts": ["parabank.parasoft.com"],
+              "app": {"vendor": "Parasoft", "product": "ParaBank", "version": "3.0"}},
+        local={"hosts": ["127.0.0.1:8799"],
+               "app": {"vendor": "Meridian", "product": "CoreServ", "version": "7.2"}},
+    )
+    assert for_host("parabank.parasoft.com", tmp_path).app.product == "ParaBank"
+    assert for_host("127.0.0.1:8799", tmp_path).app.product == "CoreServ"
+
+
+def test_an_unclaimed_host_gets_no_profile_rather_than_someone_elses(tmp_path):
+    from pcx.artifact.profiles import for_host
+
+    _profiles(
+        tmp_path,
+        bank={"hosts": ["parabank.parasoft.com"],
+              "app": {"vendor": "Parasoft", "product": "ParaBank", "version": "3.0"}},
+    )
+    assert for_host("shop.example.com", tmp_path) is None
+
+
+def test_a_host_matches_a_parent_domain_only_on_a_dot_boundary(tmp_path):
+    """`parasoft.com` should claim `parabank.parasoft.com`. It must not claim
+    `notparasoft.com`, and a profile listing `com` must not claim everything."""
+    from pcx.artifact.profiles import for_host
+
+    _profiles(
+        tmp_path,
+        vendor={"hosts": ["parasoft.com"],
+                "app": {"vendor": "Parasoft", "product": "Everything", "version": "1"}},
+    )
+    assert for_host("parabank.parasoft.com", tmp_path) is not None
+    assert for_host("notparasoft.com", tmp_path) is None
+    assert for_host("parasoft.com.evil.example", tmp_path) is None
+
+
+def test_the_port_is_part_of_a_local_host_but_a_bare_name_still_matches(tmp_path):
+    from pcx.artifact.profiles import for_host
+
+    _profiles(
+        tmp_path,
+        local={"hosts": ["127.0.0.1:8799"],
+               "app": {"vendor": "Meridian", "product": "CoreServ", "version": "7.2"}},
+    )
+    assert for_host("127.0.0.1:8799", tmp_path) is not None
+    assert for_host("127.0.0.1:9999", tmp_path) is None
+
+
+def test_every_shipped_profile_declares_its_hosts():
+    """A profile with no hosts can only be reached by remembering a flag."""
+    from pcx.artifact.profiles import load_all
+
+    for profile in load_all():
+        assert profile.hosts, f"{profile.app.key()} declares no hosts"
+
+
+def test_replay_fills_a_missing_required_input_from_the_environment(monkeypatch):
+    """`pcx replay sign_on_parabank` should not need the password on the command
+    line. Re-auth and `--setup` already take it from the environment; making the
+    top-level call the one place it has to be typed puts it in shell history for
+    no reason."""
+    from pcx.runner import _fill_from_environment
+
+    monkeypatch.setenv("PCX_SIGN_ON_PARABANK_PASSWORD", "from-dotenv")
+    capability = make_capability(
+        id="sign_on_parabank",
+        contract=Contract(
+            summary="sign on",
+            inputs=[Param(name="username"), Param(name="password", sensitivity="secret")],
+            outputs=[Param(name="signed_in_customer")],
+            outcomes=[Outcome(code="OK", kind="success")],
+        ),
+    )
+    filled = _fill_from_environment(capability, {"username": "typed-explicitly"})
+    assert filled["password"] == "from-dotenv"
+    assert filled["username"] == "typed-explicitly", "an explicit input always wins"
+
+
+def test_replay_does_not_invent_values_for_optional_inputs(monkeypatch):
+    from pcx.runner import _fill_from_environment
+
+    monkeypatch.setenv("PCX_DEMO_CAPABILITY_NOTE", "surprise")
+    capability = make_capability(
+        contract=Contract(
+            summary="demo",
+            inputs=[Param(name="note", required=False)],
+            outputs=[Param(name="savings_balance", type="money")],
+            outcomes=[Outcome(code="OK", kind="success")],
+        ),
+    )
+    assert "note" not in _fill_from_environment(capability, {})

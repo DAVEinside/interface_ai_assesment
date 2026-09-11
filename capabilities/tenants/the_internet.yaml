@@ -1,0 +1,9 @@
+tenant_id: the_internet
+base_url: https://the-internet.herokuapp.com
+label: Elemental Selenium 'The Internet'
+step_locator_overrides: {}
+text_overrides: {}
+timing_multiplier: 2.0
+disabled_steps: []
+notes: Live public instance. Stable fallback target when ParaBank is slow or being
+  reset.

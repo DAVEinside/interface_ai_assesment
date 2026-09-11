@@ -27,6 +27,7 @@ import time
 from dataclasses import dataclass
 from typing import Any
 
+from ..agent.reporter import NullReporter, Reporter
 from ..agent.trace import ScreenState
 from ..artifact.locator import Resolution, resolve
 from ..artifact.schema import PARSERS, Capability, Condition, Step
@@ -76,6 +77,7 @@ class ReplayEngine:
         broker: SessionBroker | None = None,
         options: ReplayOptions | None = None,
         capability_loader=None,
+        reporter: Reporter | None = None,
     ) -> None:
         self.surface = surface
         self.policy = policy
@@ -86,6 +88,10 @@ class ReplayEngine:
         #: Callable ``(capability_id) -> Capability``. Used for re-authentication,
         #: which is capability composition rather than a special case in here.
         self.capability_loader = capability_loader
+        #: Where a parked run says so. Silence during a handoff is the difference
+        #: between "waiting for you" and "hung", and only the caller knows whether
+        #: anyone is watching a terminal.
+        self.reporter = reporter or NullReporter()
         self._interstitials_seen = 0
         self._transient_waits = 0
         self._llm_calls = 0
@@ -120,6 +126,11 @@ class ReplayEngine:
         entrypoint_override: str | None = None,
     ) -> ReplayResult:
         started = time.time()
+        # A public host over the internet is far slower than the localhost the
+        # flow was recorded against. That is a property of *where* this runs, not
+        # of what it does, so it scales the budget here rather than editing the
+        # artifact -- see TenantOverlay.specialize.
+        self._timing = capability.tenant.timing_multiplier if capability.tenant else 1.0
         result = ReplayResult(
             run_id=self.recorder.run_id,
             capability=capability.id,
@@ -271,7 +282,7 @@ class ReplayEngine:
                         self.recorder.event(
                             "resolve_failed", step=step.id, attempt=attempt, reason=resolution.reason
                         )
-                        await self.surface.settle(timeout_ms=step.retry.backoff_ms)
+                        await self.surface.settle(timeout_ms=self._budget(step.retry.backoff_ms))
                         obs, frame = await self._observe(f"{step.id}-retry{attempt}")
                         continue
                     if resolution.degraded:
@@ -290,7 +301,7 @@ class ReplayEngine:
                 if not outcome.ok:
                     last_reason = outcome.detail
                     self.recorder.event("act_failed", step=step.id, attempt=attempt, detail=outcome.detail)
-                    await self.surface.settle(timeout_ms=step.retry.backoff_ms)
+                    await self.surface.settle(timeout_ms=self._budget(step.retry.backoff_ms))
                     obs, frame = await self._observe(f"{step.id}-retry{attempt}")
                     continue
 
@@ -352,7 +363,7 @@ class ReplayEngine:
             # maintenance banner is served in place of the page you asked for --
             # so recovery has to run before the expectation is judged, or every
             # recoverable condition reads as "unrecognized screen".
-            await self.surface.settle(timeout_ms=step.timeout_ms)
+            await self.surface.settle(timeout_ms=self._budget(step.timeout_ms))
             obs, frame = await self._observe(f"{step.id}-after")
             obs, frame2, classified, restart = await self._stabilize(capability, step, obs, result)
             frame = frame2 or frame
@@ -634,7 +645,19 @@ class ReplayEngine:
         self._reauths += 1
         self.recorder.event("recovery", kind="reauth", capability=reauth_id, detail=why)
 
-        reauth_cap = self.capability_loader(reauth_id)
+        # The profile names its re-auth capability as a forward reference, so the
+        # sign-on flow may simply not have been recorded yet. That is a
+        # configuration state, not a crash.
+        try:
+            reauth_cap = self.capability_loader(reauth_id)
+        except FileNotFoundError:
+            return self._fail(
+                result, "SESSION_EXPIRED",
+                f"session is not authenticated ({why}) and the configured re-auth "
+                f"capability {reauth_id!r} has not been recorded",
+                obs=obs, started=result.started_at,
+                hint=f"Record it first: pcx discover --id {reauth_id} ...",
+            )
         sub = ReplayEngine(
             self.surface,
             PolicyEngine(
@@ -682,6 +705,32 @@ class ReplayEngine:
         self.recorder.event("approval_resolved", disposition=outcome.disposition, operator=outcome.operator)
         return outcome.disposition == "approved"
 
+    def _announce_wait(self, request: InterventionRequest) -> None:
+        """Say that the run is parked, and what the person has to do.
+
+        A handoff that prints nothing is indistinguishable from a hang: the run
+        simply stops for up to fifteen minutes. And "take control of the live
+        session" is not one action -- the broker will not accept an operator
+        action until the request is *claimed*, so a person who opens the console
+        and starts clicking the screen gets nothing and no explanation.
+        """
+        budget = int(self.broker.auto_timeout_s) if self.broker else 0
+        where = self.broker.console_url if self.broker else None
+        if not where:
+            self.reporter.note(
+                f"escalated, but no operator console is running -- nothing can answer this. "
+                f"Aborting in {budget}s; re-run with --console.", "warn",
+            )
+            return
+        self.reporter.note(f"escalated: {request.reason[:120]}", "warn")
+        self.reporter.note(f"WAITING FOR A HUMAN -- open {where} in a web browser", "warn")
+        self.reporter.note(f"  (this run aborts on its own after {budget}s)", "warn")
+        self.reporter.note("  On that page, in the 'Intervention' card, top right:", "warn")
+        self.reporter.note("  1. click 'Take control' -- until you do, the screen is read-only", "warn")
+        self.reporter.note("  2. click the live screen on the left to focus a field, then use", "warn")
+        self.reporter.note("     the 'Manual input' card: type text, then 'Type' / Enter / Tab", "warn")
+        self.reporter.note("  3. click 'Resume' to hand control back", "warn")
+
     async def escalate_failure(self, capability: Capability, result: ReplayResult) -> ReplayResult:
         """Route a hard failure to a human, and let them finish on the live session."""
         if self.broker is None or result.failure is None:
@@ -706,7 +755,9 @@ class ReplayEngine:
             },
         )
         self.recorder.event("escalation_raised", request_id=request.id, reason=request.reason)
+        self._announce_wait(request)
         outcome = await self.broker.raise_intervention(request)
+        result.human_interventions += 1
         self.recorder.event(
             "escalation_resolved",
             disposition=outcome.disposition,
@@ -814,6 +865,10 @@ class ReplayEngine:
             text,
         )
 
+    def _budget(self, recorded_ms: int) -> int:
+        """Scale a recorded wait by this tenant's timing multiplier."""
+        return int(recorded_ms * getattr(self, "_timing", 1.0))
+
     def _mask_sent(self, capability: Capability, step: Step, sent: str | None) -> str | None:
         if sent is None:
             return None
@@ -825,14 +880,33 @@ class ReplayEngine:
 
 def _credentials_for(capability: Capability) -> dict[str, Any]:
     """Resolve a sign-on capability's inputs from the environment, never the artifact."""
-    import os
+    from ..config import resolve_credential
 
     values: dict[str, Any] = {}
     for param in capability.contract.inputs:
-        env_key = f"PCX_{param.name.upper()}"
-        if env_key in os.environ:
-            values[param.name] = os.environ[env_key]
+        value, _ = resolve_credential(capability.id, param.name)
+        if value is not None:
+            values[param.name] = value
     return values
+
+
+def missing_credentials_for(capability: Capability) -> list[str]:
+    """Which required inputs of a capability the environment cannot supply.
+
+    Reported as the variable names that *would* have worked, because "set one of
+    these" is actionable and "input 'username' is required" is not.
+    """
+    from ..config import credential_env_candidates, resolve_credential
+
+    missing: list[str] = []
+    for param in capability.contract.inputs:
+        if not param.required or param.default is not None:
+            continue
+        value, _ = resolve_credential(capability.id, param.name)
+        if value is None:
+            names = " or ".join(f"${n}" for n in credential_env_candidates(capability.id, param.name))
+            missing.append(f"  {param.name}  needs {names}")
+    return missing
 
 
 def _manifest(result: ReplayResult) -> dict[str, Any]:

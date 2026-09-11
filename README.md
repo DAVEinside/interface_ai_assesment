@@ -19,12 +19,15 @@ slowness, an unhandled application error).
 
 Design rationale, trade-offs and limits: **[REPORT.md](REPORT.md)**.
 Runs from a real discovery and real replays: **[evidence/](evidence/)**.
+Pointing it at a **live public website**: **[docs/LIVE_SITE_DEMO.md](docs/LIVE_SITE_DEMO.md)**
+— one profile file, one policy entry, one tenant overlay, no code changes.
+Demoing the whole thing live, act by act: **[docs/WALKTHROUGH.md](docs/WALKTHROUGH.md)**.
 
 ---
 
 ## Setup
 
-**[RUNNING.md](RUNNING.md)** is the full walkthrough — native Windows *and* WSL
+**[docs/RUNNING.md](docs/RUNNING.md)** is the full walkthrough — native Windows *and* WSL
 (both work equally well), VS Code setup, a verification checklist, troubleshooting.
 
 ```bash
@@ -53,7 +56,7 @@ CLI installed and logged in, `PCX_LLM=cli` uses that instead of a raw key.
 
 `pcx discover` narrates each turn live — what the model saw, what it decided and
 why, what it did, and what it cost. See
-[RUNNING.md § Discovery](RUNNING.md#discovery--the-llm-driven-half) for a sample
+[docs/RUNNING.md § Discovery](docs/RUNNING.md#discovery--the-llm-driven-half) for a sample
 transcript and for how a trace becomes a capability.
 
 Both are real model calls through the same `LLMClient` interface and the same
@@ -69,9 +72,15 @@ export PCX_OPERATOR_ID=TLR0042
 export PCX_OPERATOR_PASSWORD='openSesame!42'
 ```
 
+A discovery run takes a credential by *reference* — `--secret username=PCX_MY_USER`
+names an environment variable (`.env` included) rather than carrying the value, so
+nothing sensitive reaches your shell history or the process list. A bare
+`--param username` is the short form for `$PCX_<CAPABILITY_ID>_USERNAME`, then `$PCX_USERNAME`. Either way an unset
+variable is refused before a browser starts, naming every variable it wanted.
+
 ## Running without live services
 
-`python3 -m pytest tests/ -q` (55 tests) needs no browser, no model and no network: locator
+`python3 -m pytest tests/ -q` (93 tests) needs no browser, no model and no network: locator
 resolution, the condition language, contract validation, the guardrails, the
 redactor, tenant specialization, the compiler and the crystallization lifecycle
 are all exercised against synthetic screens.
@@ -140,6 +149,10 @@ python3 scripts/demo_handoff.py       # a replay gets stuck, a human takes over 
                                       # session, finishes by hand, hands control back
 python3 scripts/demo_crystallize.py   # Type 3 -> 2 -> 1 on evidence; a regression
                                       # demotes it; clean runs bring it back
+python3 scripts/demo_live_handoff.py  # the same escalation against a LIVE public site:
+                                      # a recorded locator no longer resolves, a human
+                                      # finishes the step, and the promotion gate then
+                                      # refuses on the intervention that just happened
 ```
 
 Every demo is a Python script, so Windows, macOS and Linux run the identical
@@ -154,15 +167,16 @@ it while the demo runs to watch the live screen and the control state change.
 
 | command | what it does |
 |---|---|
-| `pcx discover --goal … --id … --param k=v --output name` | LLM-driven run against a live surface; emits a capability |
-| `pcx replay <id> --input k=v [--tenant t] [--escalate] [--console]` | deterministic execution; returns typed outputs or a structured outcome |
+| `pcx discover --goal … --id … [--param k=v] [--secret k=ENV] [--tenant t] [--setup c] --output name` | LLM-driven run against a live surface; emits a capability |
+| `pcx replay <id> [--input k=v] [--secret k=ENV] [--tenant t] [--escalate] [--console]` | deterministic execution; returns typed outputs or a structured outcome. Required inputs you omit are resolved from `$PCX_<ID>_<NAME>` |
 | `pcx invoke <id> --input k=v` | production entry point: routes to the cheapest execution type the capability has earned |
 | `pcx show <id> [--tool-schema]` | print the artifact, or its JSON-Schema tool view for a calling agent |
 | `pcx status <id>` | crystallization state, evidence counters, and each promotion gate with PASS/FAIL |
-| `pcx promote <id> [--mark-reviewed]` / `pcx demote <id>` | apply the lifecycle by hand |
+| `pcx promote <id> [--mark-reviewed]` / `pcx demote <id>` | apply the lifecycle by hand (it is otherwise automatic) |
 | `pcx test <id>` | run the acceptance tests generated from the capability's own traces |
 | `pcx recompile <trace> --id <id>` | re-crystallize a stored trace with the current compiler, without paying for the model run again |
 | `pcx tenant <id> --base-url … --text-override OLD=NEW` | register a tenant overlay |
+| `pcx profile new <key> --host …` / `pcx profile list` | scaffold a profile for a new site, or show which profile claims which host |
 | `pcx fault <name>` | arm a fault in the mock app (test harness only — the agent's allowlist forbids `/admin`) |
 
 Run `python3 -m pcx.cli --help`, or `pip install -e .` to get `pcx` on your PATH.
@@ -255,6 +269,43 @@ Everything written there passes the redactor first: no SSNs, no credentials, no
 raw PII. The artifacts in `capabilities/` contain no member numbers, names,
 balances or operator ids at all — sensitive acceptance-test inputs live in a
 gitignored `fixtures/` sidecar.
+
+## The lifecycle, concretely
+
+A capability is born Type 3 and moves down as evidence accumulates. Both
+directions are automatic; `pcx promote` / `pcx demote` exist to force the issue.
+
+| gate | Type 3 → 2 | Type 2 → 1 | the paper |
+|---|---|---|---|
+| successful runs | **3** | **5** | 10 / 50 |
+| action-sequence stability | ≥ 0.90 | — | — |
+| locator resolution stability | — | ≥ 0.99 | — |
+| distinct input sets | — | ≥ 2 | — |
+| safety violations | 0 | 0 | 0 |
+| human interventions | 0 | — | — |
+| acceptance tests generated | required | — | — |
+| human review | — | **required** | not in the paper |
+
+The run counts are scaled down from the paper's so the lifecycle is observable
+in a demo; they are `PromotionGates` in `schema.py`, configuration rather than
+design, and a capability can carry its own. Everything else is not scaled.
+
+Two gates are deliberately *not* the paper's. Promotion to Type 1 additionally
+requires a human review flag (`pcx promote --mark-reviewed`): locator resolution
+is a perception problem, and "the model agreed with itself 50 times" is weaker
+evidence about a UI than it is about a log line. And a run that needed a human
+intervention blocks promotion outright — a flow that needed hands has not earned
+fewer of them.
+
+Promotion is applied automatically after any run that leaves a capability
+eligible. `PCX_AUTO_PROMOTE=0` restores promote-by-hand. It is safe to have on
+because the circuit breaker runs in the other direction on the same schedule: a
+hard failure, a safety violation or an acceptance-test regression demotes and
+quarantines, so being wrong is recoverable without a human noticing first.
+
+```bash
+pcx status read_member_savings_balance   # every gate, with PASS/FAIL and the counts
+```
 
 ## Attribution
 
