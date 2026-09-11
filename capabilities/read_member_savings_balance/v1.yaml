@@ -554,7 +554,7 @@ policy:
   - TAX ID \(SSN\)\s*:?\s*[0-9-]+
 crystallization:
   execution_type: 3
-  status: candidate
+  status: quarantined
   gates:
     t3_to_t2_min_runs: 3
     t3_to_t2_min_sequence_stability: 0.9
@@ -564,17 +564,22 @@ crystallization:
     require_acceptance_tests: true
     require_human_review_for_t1: true
   evidence:
-    successful_runs: 0
-    failed_runs: 0
-    distinct_input_sets: 0
+    successful_runs: 14
+    failed_runs: 3
+    distinct_input_sets: 5
     safety_violations: 0
     human_interventions: 0
-    action_sequence_stability: 0.0
-    resolution_stability: 0.0
+    action_sequence_stability: 1.0
+    resolution_stability: 1.0
     degraded_resolutions: 0
     drift_signals: 0
-    successful_runs_since_demotion: 0
+    tenants_seen:
+    - default
+    successful_runs_since_demotion: 2
     failed_runs_since_demotion: 0
+    last_promoted_at: '2026-09-11T16:09:09.981925+00:00'
+    last_demoted_at: '2026-09-11T16:09:44.481066+00:00'
+    last_demotion_reason: 'hard failure: APPLICATION_ERROR'
     human_reviewed: false
   acceptance_tests:
   - name: recorded_happy_path
@@ -585,4 +590,7 @@ crystallization:
     - member_name
     expect_output_matches:
       savings_balance: ^-?\(?\$?[0-9][0-9,]*\.[0-9]{2}\)?$
+  hybrid_steps:
+  - s1
+  - s3
 _digest: sha256:8dbe5384cffbfe0f3c6e3798a9f71885

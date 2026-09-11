@@ -7,3 +7,4 @@ fastapi>=0.110
 uvicorn>=0.29
 flask>=3.0
 pytest>=8.0
+numpy

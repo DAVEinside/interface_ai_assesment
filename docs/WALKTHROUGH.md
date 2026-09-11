@@ -8,7 +8,7 @@ Two terminals, a browser, and `.env` filled in. Before you start:
 
 ```bash
 python scripts/doctor.py          # says "Everything is ready"
-python -m pytest tests/ -q        # 93 passed, no browser, no model, no network
+python -m pytest tests/ -q        # 95 passed, no browser, no model, no network
 pcx target                        # terminal 1 -- leave it running
 ```
 
@@ -562,10 +562,10 @@ Be straight about what is not done:
 > the paper's 10 and 50, and that is a config change, not a design change.
 
 ```bash
-python -m pytest tests/ -q     # 93 passed
+python -m pytest tests/ -q     # 95 passed
 ```
 
-> Ninety-three tests, no browser, no model, no network. The locator strategies,
+> Ninety-five tests, no browser, no model, no network. The locator strategies,
 > the condition language, the contract boundary, the guardrails, the redactor,
 > tenant binding, the compiler and the whole crystallization lifecycle, all
 > against synthetic screens. The evidence directory has the runs.
